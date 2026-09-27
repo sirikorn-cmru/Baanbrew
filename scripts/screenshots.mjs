@@ -28,10 +28,13 @@ const OVERVIEW_DRAWN = `(() => {
 })()`
 
 // หน้าเจาะลึกยอดขาย: ฮิสโตแกรมยอดต่อบิลมีแท่ง + เส้นค่ากลาง/ค่าเฉลี่ย, heatmap ครบ 7 วัน × 14 ชั่วโมง,
-// ส่วนสมาชิก (โหลด members.csv แยก) มีกราฟ 2 ตัวที่วาดแท่งแล้ว
+// ส่วนเมนู (ชื่อเมนูจาก products.csv) และส่วนสมาชิก (โหลด members.csv แยก) มีกราฟ 2 ตัวที่วาดแท่งแล้ว
 const INSIGHTS_DRAWN = `(() => {
+  const menu = document.querySelector('[aria-labelledby="menu-heading"]')
   const members = document.querySelector('[aria-labelledby="members-heading"]')
   return document.querySelectorAll('.recharts-bar-rectangle path').length >= 10 &&
+    !!menu && menu.querySelectorAll('.recharts-bar-rectangle path').length >= 18 &&
+    !menu.textContent.includes('ไม่ระบุหมวด') && // products.csv โหลดแล้ว (ยังไม่โหลด = ทุกเมนูอยู่หมวด "ไม่ระบุหมวด")
     document.querySelectorAll('.recharts-reference-line').length >= 2 &&
     document.querySelectorAll('button[aria-label$="บิลต่อวัน"]').length >= 98 &&
     !!members && members.querySelectorAll('svg.recharts-surface').length >= 2 &&

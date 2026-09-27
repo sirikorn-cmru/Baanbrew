@@ -7,6 +7,7 @@ import DailySalesChart from './components/DailySalesChart'
 import FilterBar from './components/FilterBar'
 import KpiCard from './components/KpiCard'
 import MemberSection from './components/MemberSection'
+import MenuSection from './components/MenuSection'
 import ThemeToggle from './components/ThemeToggle'
 import WeekdayHourHeatmap from './components/WeekdayHourHeatmap'
 import Lab2Page from './lab2/Lab2Page'
@@ -20,6 +21,7 @@ import {
   getDateBounds,
   listBranches,
   memberInsights,
+  menuSales,
   movingAverage,
   parseMembers,
   parseSales,
@@ -184,6 +186,7 @@ function App() {
       daily,
       bills: billDistribution(rangeRows),
       heatmap: weekdayHourHeatmap(rangeRows, { from, to }),
+      menu: menuSales(rangeRows, products),
       members: members.length ? memberInsights(state.rows, rangeRows, members, { from, to, branches }) : null,
       branches: salesByBranch(rangeRows),
       trend: {
@@ -194,7 +197,7 @@ function App() {
         autoGranularity,
       },
     }
-  }, [state, base, deferredFilters, members])
+  }, [state, base, deferredFilters, members, products])
 
   const chooseGranularity = useCallback((granularity) => updateFilters({ granularity }), [updateFilters])
 
@@ -292,6 +295,7 @@ function App() {
                 <>
                   <BillDistributionChart data={metrics.bills} />
                   <WeekdayHourHeatmap data={metrics.heatmap} />
+                  <MenuSection data={metrics.menu} />
                   {metrics.members && <MemberSection data={metrics.members} />}
                 </>
               )}

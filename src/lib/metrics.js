@@ -238,6 +238,62 @@ export function weekdayHourHeatmap(rows, { from, to }) {
   return { hours, days, max: peak.bills, peak, quiet }
 }
 
+// ---------- เมนู ----------
+
+// ยอดขายแยกเมนูและหมวด พร้อมกำไรขั้นต้นโดยประมาณ = qty × (ราคาขายจริง − ต้นทุนต่อหน่วยใน products.csv)
+// products = แถวจาก products.csv (product_id, product_name, category, cost) · ไม่มีข้อมูลเมนู = ใช้รหัสแทนชื่อ ไม่คิดกำไร
+// คืน { total, hasCost, items: [...เรียงยอดมาก→น้อย], categories: [...เรียงยอดมาก→น้อย] }
+export function menuSales(rows, products = []) {
+  const info = new Map(products.map((p) => [p.product_id?.trim(), p]))
+  const byItem = new Map()
+  let total = 0
+  for (const row of rows) {
+    const item = byItem.get(row.product_id) ?? { product_id: row.product_id, qty: 0, sales: 0, profit: 0 }
+    const sales = lineTotal(row)
+    const cost = toNumber(info.get(row.product_id)?.cost)
+    item.qty += row.qty
+    item.sales += sales
+    item.profit += Number.isFinite(cost) ? sales - row.qty * cost : NaN
+    byItem.set(row.product_id, item)
+    total += sales
+  }
+
+  const items = [...byItem.values()]
+    .map((it) => {
+      const p = info.get(it.product_id)
+      return {
+        ...it,
+        name: p?.product_name?.trim() || it.product_id,
+        category: p?.category?.trim() || 'ไม่ระบุหมวด',
+        sales: round2(it.sales),
+        profit: Number.isFinite(it.profit) ? round2(it.profit) : null,
+        share: total ? it.sales / total : 0,
+      }
+    })
+    .sort((a, b) => b.sales - a.sales)
+
+  const byCategory = new Map()
+  for (const it of items) {
+    const c = byCategory.get(it.category) ?? { category: it.category, items: 0, qty: 0, sales: 0, profit: 0 }
+    c.items++
+    c.qty += it.qty
+    c.sales += it.sales
+    c.profit = c.profit === null || it.profit === null ? null : c.profit + it.profit
+    byCategory.set(it.category, c)
+  }
+  const categories = [...byCategory.values()]
+    .map((c) => ({
+      ...c,
+      sales: round2(c.sales),
+      profit: c.profit === null ? null : round2(c.profit),
+      share: total ? c.sales / total : 0,
+      margin: c.profit === null || !c.sales ? null : c.profit / c.sales,
+    }))
+    .sort((a, b) => b.sales - a.sales)
+
+  return { total: round2(total), hasCost: items.every((it) => it.profit !== null), items, categories }
+}
+
 // ---------- สมาชิก ----------
 
 // อ่าน members.csv → [{ customer_id, joined_date, branch }] (branch = ชื่อสาขาประจำ จาก branchNames: B01 → สยาม)
