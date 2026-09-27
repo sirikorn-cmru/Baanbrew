@@ -25,3 +25,7 @@ dist-ssr
 
 # Original Excel export — the dashboard reads public/sales.csv
 public/sales.xlsx
+
+# Claude Code: personal local settings and temp files written by the app
+.claude/settings.local.json
+.claude/*.tmp.*
