@@ -1,3 +1,4 @@
+import Papa from 'papaparse'
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import BranchSalesChart from './components/BranchSalesChart'
 import BranchTrendChart from './components/BranchTrendChart'
@@ -5,6 +6,7 @@ import DailySalesChart from './components/DailySalesChart'
 import FilterBar from './components/FilterBar'
 import KpiCard from './components/KpiCard'
 import ThemeToggle from './components/ThemeToggle'
+import Lab2Page from './lab2/Lab2Page'
 import { formatBaht, formatDayLong, formatNumber } from './lib/format'
 import {
   branchSalesOverTime,
@@ -22,11 +24,20 @@ import { applyTheme, useTheme } from './lib/theme'
 import { filtersFromSearch, filtersToSearch } from './lib/urlFilters'
 
 const CSV_URL = '/sales.csv'
+const PRODUCTS_URL = '/products.csv'
+const LAB2_HASH = '#lab2'
+
+const TABS = [
+  { id: 'overview', label: 'ภาพรวม' },
+  { id: 'lab2', label: 'Lab 2.2 · ซ่อมกราฟ' },
+]
 const MERGE_WINDOW_MS = 400
 
 function App() {
   const [state, setState] = useState({ status: 'loading' })
   const [userFilters, setFilters] = useState(null) // null = ยังไม่ได้เลือก → ใช้ค่าจาก URL
+  const [products, setProducts] = useState([]) // ไม่มีไฟล์ = แสดงรหัสเมนูแทนชื่อ
+  const [tab, setTab] = useState(() => (window.location.hash === LAB2_HASH ? 'lab2' : 'overview'))
   const { resolved: theme } = useTheme()
 
   useEffect(() => applyTheme(theme), [theme])
@@ -42,10 +53,24 @@ function App() {
       })
       .then((text) => !cancelled && setState({ status: 'ready', ...parseSales(text) }))
       .catch((err) => !cancelled && setState({ status: 'error', message: err.message }))
+    fetch(PRODUCTS_URL)
+      .then((res) => (res.ok && !(res.headers.get('content-type') ?? '').includes('text/html') ? res.text() : ''))
+      .then((text) => {
+        const { data } = Papa.parse(text, { header: true, skipEmptyLines: 'greedy', transformHeader: (h) => h.trim() })
+        if (!cancelled) setProducts(data)
+      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
   }, [])
+
+  // สลับแท็บด้วย hash (#lab2) ไม่เพิ่มประวัติ และคงตัวกรองใน query string ไว้
+  const chooseTab = (id) => {
+    setTab(id)
+    const hash = id === 'lab2' ? LAB2_HASH : ''
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`)
+  }
 
   // ข้อมูลที่ไม่ขึ้นกับตัวกรอง: ช่วงวันที่ทั้งหมดและรายชื่อสาขา
   const base = useMemo(() => {
@@ -148,7 +173,9 @@ function App() {
   const chooseGranularity = useCallback((granularity) => updateFilters({ granularity }), [updateFilters])
 
   const scopeText =
-    filters &&
+    tab === 'lab2'
+      ? 'ข้อมูลทั้งหมด ทุกสาขา (ไม่ใช้ตัวกรองของหน้าภาพรวม)'
+      : filters &&
     `${formatDayLong(filters.from)} – ${formatDayLong(filters.to)} · ${
       filters.branches.length ? filters.branches.join(', ') : 'ทุกสาขา'
     }`
@@ -164,6 +191,24 @@ function App() {
           <ThemeToggle />
         </header>
 
+        <nav className="mb-5 flex gap-1 sm:mb-6" aria-label="เลือกหน้า">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => chooseTab(t.id)}
+              aria-current={tab === t.id ? 'page' : undefined}
+              className={`rounded-lg px-4 py-2 text-sm font-medium ${
+                tab === t.id
+                  ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900'
+                  : 'text-stone-600 hover:bg-stone-200 dark:text-stone-400 dark:hover:bg-stone-800'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+
         {state.status === 'loading' && <p className="text-stone-500 dark:text-stone-400">กำลังโหลดข้อมูล…</p>}
 
         {state.status === 'error' && (
@@ -173,7 +218,9 @@ function App() {
           </div>
         )}
 
-        {metrics && (
+        {state.status === 'ready' && tab === 'lab2' && <Lab2Page rows={state.rows} products={products} />}
+
+        {metrics && tab === 'overview' && (
           <div className="space-y-4 sm:space-y-6">
             <FilterBar bounds={base.bounds} branches={base.branches} filters={filters} onChange={updateFilters} />
 

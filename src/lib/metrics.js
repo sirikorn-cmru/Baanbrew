@@ -50,6 +50,7 @@ export function parseSales(csvText) {
       payment_method: raw.payment_method,
       channel: raw.channel,
     }
+    row.revenue = lineTotal(row) // ใช้ร่วมกับฟังก์ชันใน src/lab2/lab2Metrics.js
     const valid =
       row.order_id && row.date && Number.isFinite(row.qty) && Number.isFinite(row.unit_price)
     if (valid) rows.push(row)
@@ -98,6 +99,11 @@ export function dailySales(rows, range) {
     result.push({ date: key, sales: round2(byDate.get(key) ?? 0) })
   }
   return result
+}
+
+// ยอดขายรายวันในรูป { date, revenue } สำหรับกราฟใน src/lab2
+export function dailyRevenue(rows) {
+  return dailySales(rows).map(({ date, sales }) => ({ date, revenue: sales }))
 }
 
 // เพิ่มค่าเฉลี่ยเคลื่อนที่ย้อนหลัง `window` วัน (รวมวันนั้นเอง) ลงใน field `avg`
