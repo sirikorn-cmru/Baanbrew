@@ -2,6 +2,8 @@
 
 Dashboard สรุปยอดขายของร้านบ้านบรูจากไฟล์ `public/sales.csv` สร้างด้วย React + Vite + Tailwind CSS + Recharts
 
+**ดูออนไลน์:** https://baanbrew-dashboard-weld.vercel.app/ (deploy บน Vercel อัปเดตอัตโนมัติทุกครั้งที่ push)
+
 ข้อมูลครอบคลุม **1 เม.ย. 2568 – 20 ก.ย. 2569** จำนวน 53,092 แถว (34,791 บิล) จาก 5 สาขา
 
 ![ภาพหน้าจอ บ้านบรู Dashboard: ตัวกรอง, KPI 4 ตัว, กราฟยอดขายรายวัน, ยอดขายแยกสาขา และยอดขายรายสาขาตามเวลา](docs/screenshots/dashboard-light.png)
