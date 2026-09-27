@@ -23,7 +23,7 @@ Dashboard สรุปยอดขายของร้านบ้านบร�
   </tr>
 </table>
 
-ภาพทั้งหมดแสดงข้อมูลทั้งช่วง (ทุกสาขา) ถ่ายด้วย Chrome แบบ headless ที่ความกว้าง 1280px และ 390px
+ภาพทั้งหมดแสดงข้อมูลทั้งช่วง (ทุกสาขา) ถ่ายด้วย Chrome แบบ headless ที่ความกว้าง 1280px และ 390px ด้วยคำสั่ง `npm run screenshots` ([`scripts/screenshots.mjs`](scripts/screenshots.mjs))
 
 ---
 
@@ -44,6 +44,7 @@ npm run dev
 | `npm run build` | build เป็นไฟล์สำหรับใช้งานจริงในโฟลเดอร์ `dist/` |
 | `npm run preview` | เปิดดูผลจาก `npm run build` |
 | `npm run lint` | ตรวจโค้ดด้วย oxlint |
+| `npm run screenshots` | ถ่ายภาพหน้าจอใหม่ลง `docs/screenshots/` (ต้องเปิด `npm run dev` ไว้ก่อน และมี Chrome หรือ Edge ในเครื่อง) |
 
 ---
 
@@ -173,6 +174,8 @@ npm run dev
 
 ```
 docs/screenshots/           ภาพหน้าจอที่ใช้ใน README
+scripts/
+  screenshots.mjs           สคริปต์ถ่ายภาพหน้าจอ (npm run screenshots)
 public/
   sales.csv                 ข้อมูลขาย
 src/
