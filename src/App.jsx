@@ -1,5 +1,6 @@
 import Papa from 'papaparse'
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import BillDistributionChart from './components/BillDistributionChart'
 import BranchSalesChart from './components/BranchSalesChart'
 import BranchTrendChart from './components/BranchTrendChart'
 import DailySalesChart from './components/DailySalesChart'
@@ -9,6 +10,7 @@ import ThemeToggle from './components/ThemeToggle'
 import Lab2Page from './lab2/Lab2Page'
 import { formatBaht, formatDayLong, formatNumber } from './lib/format'
 import {
+  billDistribution,
   branchSalesOverTime,
   computeKpis,
   dailySales,
@@ -159,6 +161,7 @@ function App() {
       isEmpty: rangeRows.length === 0,
       kpis: computeKpis(rangeRows),
       daily,
+      bills: billDistribution(rangeRows),
       branches: salesByBranch(rangeRows),
       trend: {
         // ส่ง branchRows (ทุกวันที่) เพื่อให้รู้วันเปิดสาขาจริง แม้วันนั้นอยู่นอกช่วงที่เลือก
@@ -231,7 +234,11 @@ function App() {
               <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <KpiCard label="ยอดขายรวม" value={formatBaht(metrics.kpis.totalSales)} />
                 <KpiCard label="จำนวนบิล" value={formatNumber(metrics.kpis.orderCount)} hint="นับ order_id ไม่ซ้ำ" />
-                <KpiCard label="ยอดเฉลี่ยต่อบิล" value={formatBaht(metrics.kpis.avgPerOrder)} />
+                <KpiCard
+                  label="ยอดเฉลี่ยต่อบิล"
+                  value={formatBaht(metrics.kpis.avgPerOrder)}
+                  hint={`ค่ากลาง ${formatBaht(metrics.bills.median)}`}
+                />
                 <KpiCard
                   label="ลูกค้าสมาชิก (ไม่ซ้ำ)"
                   value={formatNumber(metrics.kpis.uniqueMembers)}
@@ -246,6 +253,7 @@ function App() {
               ) : (
                 <>
                   <DailySalesChart data={metrics.daily} />
+                  <BillDistributionChart data={metrics.bills} />
                   <BranchSalesChart data={metrics.branches} />
                   <BranchTrendChart
                     data={metrics.trend.data}

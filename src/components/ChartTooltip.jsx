@@ -2,7 +2,8 @@ import { useChartTheme } from '../lib/chartTheme'
 import { formatBaht } from '../lib/format'
 
 // series (ไม่บังคับ): [{ key, name, opacity }] กำหนดลำดับ ชื่อ และความจางของจุดสีในแต่ละแถว
-function ChartTooltip({ active, payload, label, formatLabel = (l) => l, series }) {
+// formatValue (ไม่บังคับ): รูปแบบตัวเลข ค่าตั้งต้นเป็นบาท
+function ChartTooltip({ active, payload, label, formatLabel = (l) => l, formatValue = formatBaht, series }) {
   const theme = useChartTheme()
   if (!active || !payload?.length) return null
 
@@ -24,7 +25,7 @@ function ChartTooltip({ active, payload, label, formatLabel = (l) => l, series }
         >
           <span className="size-2 rounded-full" style={{ background: theme.series, opacity: item.opacity }} />
           {item.name && <span className="font-normal text-stone-500 dark:text-stone-400">{item.name}</span>}
-          <span className="ml-auto pl-3">{formatBaht(item.value)}</span>
+          <span className="ml-auto pl-3">{formatValue(item.value)}</span>
         </p>
       ))}
     </div>

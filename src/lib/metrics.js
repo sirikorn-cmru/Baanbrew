@@ -129,6 +129,56 @@ export function salesByBranch(rows) {
     .sort((a, b) => b.sales - a.sales)
 }
 
+// ---------- การกระจายยอดต่อบิล ----------
+
+// ยอดรวมของแต่ละบิล (1 บิล = ทุกแถวของ order_id เดียวกัน)
+export function billTotals(rows) {
+  const byOrder = new Map()
+  for (const row of rows) {
+    byOrder.set(row.order_id, (byOrder.get(row.order_id) ?? 0) + lineTotal(row))
+  }
+  return [...byOrder.values()]
+}
+
+// quantile แบบ linear interpolation (วิธีเดียวกับ pandas) ของ array ที่เรียงแล้ว
+function quantileSorted(sorted, q) {
+  const pos = (sorted.length - 1) * q
+  const lo = Math.floor(pos)
+  const hi = Math.ceil(pos)
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo)
+}
+
+// ฮิสโตแกรมยอดต่อบิล ช่องละ binSize บาท + ค่าสรุป
+// บิลที่ใหญ่กว่า percentile 99 รวมไว้ในช่องสุดท้าย (tailFrom ขึ้นไป) เพื่อไม่ให้หางยาวบีบกราฟ
+// คืน { bins: [{ from, to, bills, share }], tailFrom, count, mean, median, p90, belowMean }
+export function billDistribution(rows, binSize = 20) {
+  const totals = billTotals(rows).sort((a, b) => a - b)
+  const count = totals.length
+  if (!count) return { bins: [], tailFrom: null, count: 0, mean: 0, median: 0, p90: 0, belowMean: 0 }
+
+  const mean = totals.reduce((sum, t) => sum + t, 0) / count
+  const tailFrom = Math.ceil(quantileSorted(totals, 0.99) / binSize) * binSize
+  const lastBin = Math.min(Math.floor(totals[count - 1] / binSize), tailFrom / binSize)
+  const bins = Array.from({ length: lastBin + 1 }, (_, i) => ({
+    from: i * binSize,
+    to: i * binSize + binSize - 1,
+    bills: 0,
+  }))
+  for (const t of totals) bins[Math.min(Math.floor(t / binSize), lastBin)].bills++
+  if (bins[lastBin].from === tailFrom) bins[lastBin].to = null // null = ช่อง "tailFrom ขึ้นไป"
+  for (const b of bins) b.share = b.bills / count
+
+  return {
+    bins,
+    tailFrom,
+    count,
+    mean: round2(mean),
+    median: round2(quantileSorted(totals, 0.5)),
+    p90: round2(quantileSorted(totals, 0.9)),
+    belowMean: totals.filter((t) => t < mean).length / count,
+  }
+}
+
 // ---------- ตัวกรอง ----------
 
 // วันแรกและวันสุดท้ายที่มีข้อมูล (YYYY-MM-DD) — วันที่รูปแบบนี้เทียบเป็น string ได้เลย
