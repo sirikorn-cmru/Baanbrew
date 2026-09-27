@@ -12,14 +12,20 @@ const pct = new Intl.NumberFormat('th-TH', { style: 'percent', maximumFractionDi
 const pct1 = new Intl.NumberFormat('th-TH', { style: 'percent', maximumFractionDigits: 1 })
 // ส่วนแบ่งต่ำกว่า 1% แสดงทศนิยม 1 ตำแหน่ง ไม่ให้ขึ้นเป็น 0%
 const shareText = (s) => (s < 0.01 ? pct1 : pct).format(s)
-// แกนยอดขาย: ช่องละ 1/2/2.5/5 × 10^k ให้ได้ราว 5 ช่อง และจบที่ค่ากลม ๆ เหนือแท่งยาวที่สุด
-function niceTicks(max, parts = 5) {
+// แกนยอดขาย: ช่องละ 1/2/2.5/5 × 10^k ให้ได้ราว `parts` ช่อง และจบที่ค่ากลม ๆ เหนือแท่งยาวที่สุด
+// จอแคบใช้ 3 ช่อง จึงเพิ่ม 7.5 ด้วย ไม่งั้นช่องจะกระโดดจาก 500K เป็น 1M แล้วแกนยาวเกินแท่งไปมาก (เช่น ฿2M → แกน ฿3M)
+const DESKTOP_STEPS = [1, 2, 2.5, 5, 10]
+const MOBILE_STEPS = [1, 2, 2.5, 5, 7.5, 10]
+function niceTicks(max, parts, multipliers) {
   if (!(max > 0)) return [0]
   const raw = max / parts
   const pow = 10 ** Math.floor(Math.log10(raw))
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw)
+  const step = multipliers.map((m) => m * pow).find((s) => s >= raw)
   return Array.from({ length: Math.ceil(max / step) + 1 }, (_, i) => i * step)
 }
+// แกนบนจอแคบ: ทศนิยมได้ถึง 2 ตำแหน่ง เพราะช่อง 7.5 ทำให้มีค่าอย่าง ฿2.25M (formatBahtCompact ปัดเป็น ฿2.3M)
+const axisCompactFmt = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 })
+const formatAxisCompact = (n) => `฿${axisCompactFmt.format(n)}`
 const marginText = (profit, sales) => (profit === null || !sales ? '–' : pct1.format(profit / sales))
 
 // แท่งแนวนอนเรียงมาก→น้อย ป้ายท้ายแท่ง = ยอดขาย (สัดส่วน)
@@ -27,7 +33,8 @@ function SalesBars({ data, total, labelKey, labelWidth }) {
   const isMobile = useIsMobile()
   const theme = useChartTheme()
   const fontSize = isMobile ? 11 : 12
-  const ticks = niceTicks(Math.max(...data.map((d) => d.sales)), isMobile ? 3 : 5)
+  const max = Math.max(...data.map((d) => d.sales))
+  const ticks = isMobile ? niceTicks(max, 3, MOBILE_STEPS) : niceTicks(max, 5, DESKTOP_STEPS)
   return (
     <ResponsiveContainer width="100%" height={data.length * ROW_HEIGHT + 40}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: isMobile ? 92 : 128, bottom: 0, left: 0 }}>
@@ -36,7 +43,7 @@ function SalesBars({ data, total, labelKey, labelWidth }) {
           type="number"
           domain={[0, ticks.at(-1)]}
           ticks={ticks}
-          tickFormatter={isMobile ? formatBahtCompact : formatBahtShort}
+          tickFormatter={isMobile ? formatAxisCompact : formatBahtShort}
           tick={{ fill: theme.axisText, fontSize }}
           tickLine={false}
           axisLine={false}
