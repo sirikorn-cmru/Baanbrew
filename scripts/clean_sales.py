@@ -2,6 +2,7 @@
 
     from clean_sales import clean_sales
     clean, cleaning_log = clean_sales("sales_raw.csv", out="sales_clean.csv")
+    sales = add_date_hour(clean)   # เพิ่มคอลัมน์ date และ hour สำหรับวิเคราะห์ต่อ
 """
 import pandas as pd
 
@@ -108,6 +109,26 @@ def clean_sales(path, out=None):
         log_path = out[:-4] + "_log.csv" if out.endswith(".csv") else out + "_log.csv"
         cleaning_log.to_csv(log_path, index=False, encoding="utf-8-sig")
     return clean, cleaning_log
+
+
+def add_date_hour(clean):
+    """คืนสำเนาของ clean ที่เพิ่มคอลัมน์ date (YYYY-MM-DD) และ hour (0–23) ตามเวลาไทย
+
+    แปลงผ่าน timezone Asia/Bangkok จริง แล้วเทียบกับวันเวลาที่เขียนไว้ในข้อความ
+    ถ้าไม่ตรงกันแม้แถวเดียว (วันที่เลื่อนเพราะ timezone) จะหยุดทันที
+    """
+    out = clean.copy()
+    local = pd.to_datetime(out["datetime"], format="%Y-%m-%dT%H:%M:%S%z", utc=True).dt.tz_convert("Asia/Bangkok")
+    out["date"] = local.dt.strftime("%Y-%m-%d")
+    out["hour"] = local.dt.hour
+
+    # ตรวจ: datetime ทุกแถวเป็น +07:00 ดังนั้นวันและชั่วโมงต้องตรงกับตัวอักษรในข้อความ
+    shifted_date = out["date"] != out["datetime"].str[:10]
+    shifted_hour = out["hour"] != out["datetime"].str[11:13].astype(int)
+    if shifted_date.any() or shifted_hour.any():
+        raise ValueError(f"date/hour เลื่อนเพราะ timezone: วันที่ {shifted_date.sum()} แถว "
+                         f"ชั่วโมง {shifted_hour.sum()} แถว เช่น {out.loc[shifted_date | shifted_hour, 'datetime'].head().tolist()}")
+    return out
 
 
 if __name__ == "__main__":
