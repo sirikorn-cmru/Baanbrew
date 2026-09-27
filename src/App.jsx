@@ -6,6 +6,7 @@ import BranchTrendChart from './components/BranchTrendChart'
 import DailySalesChart from './components/DailySalesChart'
 import FilterBar from './components/FilterBar'
 import KpiCard from './components/KpiCard'
+import MemberSection from './components/MemberSection'
 import ThemeToggle from './components/ThemeToggle'
 import WeekdayHourHeatmap from './components/WeekdayHourHeatmap'
 import Lab2Page from './lab2/Lab2Page'
@@ -18,7 +19,9 @@ import {
   filterRows,
   getDateBounds,
   listBranches,
+  memberInsights,
   movingAverage,
+  parseMembers,
   parseSales,
   pickGranularity,
   salesByBranch,
@@ -29,6 +32,12 @@ import { filtersFromSearch, filtersToSearch } from './lib/urlFilters'
 
 const CSV_URL = '/sales.csv'
 const PRODUCTS_URL = '/products.csv'
+const MEMBERS_URL = '/members.csv' // customer_id, joined_date, home_branch_id (ไม่มีข้อมูลส่วนตัว)
+const BRANCHES_URL = '/branches.csv' // ใช้แปลง home_branch_id → ชื่อสาขา
+
+// อ่านไฟล์เสริมแบบไม่บังคับ: ไม่มีไฟล์ (Vite ส่ง index.html กลับมา) = ข้อความว่าง
+const fetchOptional = (url) =>
+  fetch(url).then((res) => (res.ok && !(res.headers.get('content-type') ?? '').includes('text/html') ? res.text() : ''))
 
 // hash ว่าง = แท็บแรก · แท็บที่ใช้ตัวกรอง (filtered) แสดงแถบตัวกรองและคำนวณตามช่วงที่เลือก
 const TABS = [
@@ -43,6 +52,7 @@ function App() {
   const [state, setState] = useState({ status: 'loading' })
   const [userFilters, setFilters] = useState(null) // null = ยังไม่ได้เลือก → ใช้ค่าจาก URL
   const [products, setProducts] = useState([]) // ไม่มีไฟล์ = แสดงรหัสเมนูแทนชื่อ
+  const [members, setMembers] = useState([]) // ไม่มีไฟล์ = ไม่แสดงส่วนสมาชิก
   const [tab, setTab] = useState(() => tabFromHash(window.location.hash))
   const currentTab = TABS.find((t) => t.id === tab)
   const { resolved: theme } = useTheme()
@@ -60,11 +70,17 @@ function App() {
       })
       .then((text) => !cancelled && setState({ status: 'ready', ...parseSales(text) }))
       .catch((err) => !cancelled && setState({ status: 'error', message: err.message }))
-    fetch(PRODUCTS_URL)
-      .then((res) => (res.ok && !(res.headers.get('content-type') ?? '').includes('text/html') ? res.text() : ''))
+    fetchOptional(PRODUCTS_URL)
       .then((text) => {
         const { data } = Papa.parse(text, { header: true, skipEmptyLines: 'greedy', transformHeader: (h) => h.trim() })
         if (!cancelled) setProducts(data)
+      })
+      .catch(() => {})
+    Promise.all([fetchOptional(MEMBERS_URL), fetchOptional(BRANCHES_URL)])
+      .then(([membersText, branchesText]) => {
+        const { data } = Papa.parse(branchesText, { header: true, skipEmptyLines: 'greedy', transformHeader: (h) => h.trim() })
+        const branchNames = Object.fromEntries(data.map((b) => [b.branch_id?.trim(), b.branch?.trim()]))
+        if (!cancelled) setMembers(parseMembers(membersText, branchNames))
       })
       .catch(() => {})
     return () => {
@@ -168,6 +184,7 @@ function App() {
       daily,
       bills: billDistribution(rangeRows),
       heatmap: weekdayHourHeatmap(rangeRows, { from, to }),
+      members: members.length ? memberInsights(state.rows, rangeRows, members, { from, to, branches }) : null,
       branches: salesByBranch(rangeRows),
       trend: {
         // ส่ง branchRows (ทุกวันที่) เพื่อให้รู้วันเปิดสาขาจริง แม้วันนั้นอยู่นอกช่วงที่เลือก
@@ -177,7 +194,7 @@ function App() {
         autoGranularity,
       },
     }
-  }, [state, base, deferredFilters])
+  }, [state, base, deferredFilters, members])
 
   const chooseGranularity = useCallback((granularity) => updateFilters({ granularity }), [updateFilters])
 
@@ -275,6 +292,7 @@ function App() {
                 <>
                   <BillDistributionChart data={metrics.bills} />
                   <WeekdayHourHeatmap data={metrics.heatmap} />
+                  {metrics.members && <MemberSection data={metrics.members} />}
                 </>
               )}
             </div>

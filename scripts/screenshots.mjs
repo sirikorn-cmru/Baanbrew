@@ -27,12 +27,16 @@ const OVERVIEW_DRAWN = `(() => {
     document.querySelectorAll('.recharts-bar-rectangle path').length >= 5
 })()`
 
-// หน้าเจาะลึกยอดขาย: ฮิสโตแกรมยอดต่อบิลมีแท่ง + เส้นค่ากลาง/ค่าเฉลี่ย, heatmap ครบ 7 วัน × 14 ชั่วโมง
-const INSIGHTS_DRAWN = `(() =>
-  document.querySelectorAll('.recharts-bar-rectangle path').length >= 10 &&
-  document.querySelectorAll('.recharts-reference-line').length >= 2 &&
-  document.querySelectorAll('button[aria-label$="บิลต่อวัน"]').length >= 98
-)()`
+// หน้าเจาะลึกยอดขาย: ฮิสโตแกรมยอดต่อบิลมีแท่ง + เส้นค่ากลาง/ค่าเฉลี่ย, heatmap ครบ 7 วัน × 14 ชั่วโมง,
+// ส่วนสมาชิก (โหลด members.csv แยก) มีกราฟ 2 ตัวที่วาดแท่งแล้ว
+const INSIGHTS_DRAWN = `(() => {
+  const members = document.querySelector('[aria-labelledby="members-heading"]')
+  return document.querySelectorAll('.recharts-bar-rectangle path').length >= 10 &&
+    document.querySelectorAll('.recharts-reference-line').length >= 2 &&
+    document.querySelectorAll('button[aria-label$="บิลต่อวัน"]').length >= 98 &&
+    !!members && members.querySelectorAll('svg.recharts-surface').length >= 2 &&
+    members.querySelectorAll('.recharts-bar-rectangle path').length >= 5
+})()`
 
 // หน้า Lab 2.2: กราฟก่อน/หลังซ่อม 5 คู่ = 10 กราฟ, เส้นรายวัน + รายสัปดาห์มีข้อมูลจริง
 const LAB2_DRAWN = `(() => {

@@ -238,6 +238,117 @@ export function weekdayHourHeatmap(rows, { from, to }) {
   return { hours, days, max: peak.bills, peak, quiet }
 }
 
+// ---------- สมาชิก ----------
+
+// อ่าน members.csv → [{ customer_id, joined_date, branch }] (branch = ชื่อสาขาประจำ จาก branchNames: B01 → สยาม)
+export function parseMembers(csvText, branchNames = {}) {
+  const { data } = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: 'greedy',
+    transformHeader: (h) => h.trim(),
+    transform: (v) => (typeof v === 'string' ? v.trim() : v),
+  })
+  return data
+    .filter((m) => m.customer_id && /^\d{4}-\d\d-\d\d$/.test(m.joined_date ?? ''))
+    .map((m) => ({
+      customer_id: m.customer_id,
+      joined_date: m.joined_date,
+      branch: branchNames[m.home_branch_id] ?? m.home_branch_id,
+    }))
+}
+
+// ยอดต่อบิลของกลุ่มบิล: { bills, share, mean, median }
+function billStats(totals, allCount) {
+  const sorted = [...totals].sort((a, b) => a - b)
+  if (!sorted.length) return { bills: 0, share: 0, mean: 0, median: 0 }
+  return {
+    bills: sorted.length,
+    share: sorted.length / allCount,
+    mean: round2(sorted.reduce((s, t) => s + t, 0) / sorted.length),
+    median: round2(quantileSorted(sorted, 0.5)),
+  }
+}
+
+export const RECENCY_BUCKETS = [
+  { key: 'active', label: 'ซื้อใน 30 วัน', maxDays: 30 },
+  { key: 'cooling', label: '31–90 วัน', maxDays: 90 },
+  { key: 'lapsing', label: '91–180 วัน', maxDays: 180 },
+  { key: 'lapsed', label: 'เกิน 180 วัน', maxDays: Infinity },
+]
+export const LAPSED_AFTER_DAYS = 90
+
+// ภาพรวมสมาชิก ณ วัน to
+// - เทียบบิลสมาชิก/ลูกค้าทั่วไป: ใช้บิลในช่วง from–to ของสาขาที่เลือก (rangeRows)
+// - สมาชิก: คนที่สาขาประจำอยู่ในสาขาที่เลือก และสมัครไม่เกินวัน to · ซื้อล่าสุด/ไม่เคยซื้อ ดูจากทุกสาขาจนถึงวัน to (allRows)
+export function memberInsights(allRows, rangeRows, members, { from, to, branches }) {
+  const billTotal = new Map()
+  const billIsMember = new Map()
+  for (const row of rangeRows) {
+    billTotal.set(row.order_id, (billTotal.get(row.order_id) ?? 0) + lineTotal(row))
+    if (!billIsMember.has(row.order_id)) billIsMember.set(row.order_id, !!row.customer_id)
+  }
+  const memberTotals = []
+  const walkInTotals = []
+  for (const [id, total] of billTotal) (billIsMember.get(id) ? memberTotals : walkInTotals).push(total)
+
+  const branchSet = branches?.length ? new Set(branches) : null
+  const people = members.filter((m) => m.joined_date <= to && (!branchSet || branchSet.has(m.branch)))
+  const lastBuy = new Map()
+  for (const row of allRows) {
+    if (!row.customer_id || row.date > to) continue
+    const last = lastBuy.get(row.customer_id)
+    if (last === undefined || row.date > last) lastBuy.set(row.customer_id, row.date)
+  }
+
+  const recency = RECENCY_BUCKETS.map((b) => ({ ...b, members: 0 }))
+  let neverBought = 0
+  let neverBoughtRecent = 0 // สมัครใน 60 วันก่อนวัน to — อาจยังไม่ถึงเวลาซื้อ
+  const recentFrom = addDays(to, -59)
+  for (const m of people) {
+    const last = lastBuy.get(m.customer_id)
+    if (last === undefined) {
+      neverBought++
+      if (m.joined_date >= recentFrom) neverBoughtRecent++
+      continue
+    }
+    const days = daysInRange(last, to) - 1
+    recency.find((b) => days <= b.maxDays).members++
+  }
+  const buyers = people.length - neverBought
+  for (const b of recency) b.share = buyers ? b.members / buyers : 0
+  const lapsed = recency.filter((b) => b.maxDays > LAPSED_AFTER_DAYS).reduce((s, b) => s + b.members, 0)
+
+  // สมัครรายเดือนในช่วง from–to (เดือนแรก/สุดท้ายอาจถูกตัด → coveredDays < days)
+  const signups = []
+  for (let start = periodStart(from, 'month'); start <= to; start = addDays(periodEnd(start, 'month'), 1)) {
+    const end = periodEnd(start, 'month')
+    signups.push({
+      start,
+      members: 0,
+      days: daysInRange(start, end),
+      coveredDays: daysInRange(start < from ? from : start, end > to ? to : end),
+    })
+  }
+  const monthIndex = new Map(signups.map((s, i) => [s.start, i]))
+  for (const m of people) {
+    if (m.joined_date < from) continue
+    signups[monthIndex.get(`${m.joined_date.slice(0, 7)}-01`)].members++
+  }
+
+  const allBills = billTotal.size
+  return {
+    member: billStats(memberTotals, allBills),
+    walkIn: billStats(walkInTotals, allBills),
+    registered: people.length,
+    buyers,
+    neverBought,
+    neverBoughtRecent,
+    lapsed,
+    recency,
+    signups,
+  }
+}
+
 // ---------- ตัวกรอง ----------
 
 // วันแรกและวันสุดท้ายที่มีข้อมูล (YYYY-MM-DD) — วันที่รูปแบบนี้เทียบเป็น string ได้เลย
