@@ -7,6 +7,7 @@ import DailySalesChart from './components/DailySalesChart'
 import FilterBar from './components/FilterBar'
 import KpiCard from './components/KpiCard'
 import ThemeToggle from './components/ThemeToggle'
+import WeekdayHourHeatmap from './components/WeekdayHourHeatmap'
 import Lab2Page from './lab2/Lab2Page'
 import { formatBaht, formatDayLong, formatNumber } from './lib/format'
 import {
@@ -21,25 +22,29 @@ import {
   parseSales,
   pickGranularity,
   salesByBranch,
+  weekdayHourHeatmap,
 } from './lib/metrics'
 import { applyTheme, useTheme } from './lib/theme'
 import { filtersFromSearch, filtersToSearch } from './lib/urlFilters'
 
 const CSV_URL = '/sales.csv'
 const PRODUCTS_URL = '/products.csv'
-const LAB2_HASH = '#lab2'
 
+// hash ว่าง = แท็บแรก · แท็บที่ใช้ตัวกรอง (filtered) แสดงแถบตัวกรองและคำนวณตามช่วงที่เลือก
 const TABS = [
-  { id: 'overview', label: 'ภาพรวม' },
-  { id: 'lab2', label: 'Lab 2.2 · ซ่อมกราฟ' },
+  { id: 'overview', label: 'ภาพรวม', hash: '', filtered: true },
+  { id: 'insights', label: 'เจาะลึกยอดขาย', hash: '#insights', filtered: true },
+  { id: 'lab2', label: 'Lab 2.2 · ซ่อมกราฟ', hash: '#lab2', filtered: false },
 ]
+const tabFromHash = (hash) => (TABS.find((t) => t.hash && t.hash === hash) ?? TABS[0]).id
 const MERGE_WINDOW_MS = 400
 
 function App() {
   const [state, setState] = useState({ status: 'loading' })
   const [userFilters, setFilters] = useState(null) // null = ยังไม่ได้เลือก → ใช้ค่าจาก URL
   const [products, setProducts] = useState([]) // ไม่มีไฟล์ = แสดงรหัสเมนูแทนชื่อ
-  const [tab, setTab] = useState(() => (window.location.hash === LAB2_HASH ? 'lab2' : 'overview'))
+  const [tab, setTab] = useState(() => tabFromHash(window.location.hash))
+  const currentTab = TABS.find((t) => t.id === tab)
   const { resolved: theme } = useTheme()
 
   useEffect(() => applyTheme(theme), [theme])
@@ -67,10 +72,10 @@ function App() {
     }
   }, [])
 
-  // สลับแท็บด้วย hash (#lab2) ไม่เพิ่มประวัติ และคงตัวกรองใน query string ไว้
+  // สลับแท็บด้วย hash (#insights, #lab2) ไม่เพิ่มประวัติ และคงตัวกรองใน query string ไว้
   const chooseTab = (id) => {
     setTab(id)
-    const hash = id === 'lab2' ? LAB2_HASH : ''
+    const { hash } = TABS.find((t) => t.id === id)
     window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`)
   }
 
@@ -162,6 +167,7 @@ function App() {
       kpis: computeKpis(rangeRows),
       daily,
       bills: billDistribution(rangeRows),
+      heatmap: weekdayHourHeatmap(rangeRows, { from, to }),
       branches: salesByBranch(rangeRows),
       trend: {
         // ส่ง branchRows (ทุกวันที่) เพื่อให้รู้วันเปิดสาขาจริง แม้วันนั้นอยู่นอกช่วงที่เลือก
@@ -176,7 +182,7 @@ function App() {
   const chooseGranularity = useCallback((granularity) => updateFilters({ granularity }), [updateFilters])
 
   const scopeText =
-    tab === 'lab2'
+    !currentTab.filtered
       ? 'ข้อมูลทั้งหมด ทุกสาขา (ไม่ใช้ตัวกรองของหน้าภาพรวม)'
       : filters &&
     `${formatDayLong(filters.from)} – ${formatDayLong(filters.to)} · ${
@@ -194,14 +200,14 @@ function App() {
           <ThemeToggle />
         </header>
 
-        <nav className="mb-5 flex gap-1 sm:mb-6" aria-label="เลือกหน้า">
+        <nav className="mb-5 flex flex-wrap gap-1 sm:mb-6" aria-label="เลือกหน้า">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => chooseTab(t.id)}
               aria-current={tab === t.id ? 'page' : undefined}
-              className={`rounded-lg px-4 py-2 text-sm font-medium ${
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium sm:px-4 ${
                 tab === t.id
                   ? 'bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900'
                   : 'text-stone-600 hover:bg-stone-200 dark:text-stone-400 dark:hover:bg-stone-800'
@@ -223,7 +229,7 @@ function App() {
 
         {state.status === 'ready' && tab === 'lab2' && <Lab2Page rows={state.rows} products={products} />}
 
-        {metrics && tab === 'overview' && (
+        {metrics && currentTab.filtered && (
           <div className="space-y-4 sm:space-y-6">
             <FilterBar bounds={base.bounds} branches={base.branches} filters={filters} onChange={updateFilters} />
 
@@ -231,29 +237,30 @@ function App() {
               aria-busy={isStale}
               className={`space-y-4 transition-opacity duration-150 sm:space-y-6 ${isStale ? 'opacity-60' : ''}`}
             >
-              <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                <KpiCard label="ยอดขายรวม" value={formatBaht(metrics.kpis.totalSales)} />
-                <KpiCard label="จำนวนบิล" value={formatNumber(metrics.kpis.orderCount)} hint="นับ order_id ไม่ซ้ำ" />
-                <KpiCard
-                  label="ยอดเฉลี่ยต่อบิล"
-                  value={formatBaht(metrics.kpis.avgPerOrder)}
-                  hint={`ค่ากลาง ${formatBaht(metrics.bills.median)}`}
-                />
-                <KpiCard
-                  label="ลูกค้าสมาชิก (ไม่ซ้ำ)"
-                  value={formatNumber(metrics.kpis.uniqueMembers)}
-                  hint="ไม่นับลูกค้าทั่วไป"
-                />
-              </section>
+              {tab === 'overview' && (
+                <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                  <KpiCard label="ยอดขายรวม" value={formatBaht(metrics.kpis.totalSales)} />
+                  <KpiCard label="จำนวนบิล" value={formatNumber(metrics.kpis.orderCount)} hint="นับ order_id ไม่ซ้ำ" />
+                  <KpiCard
+                    label="ยอดเฉลี่ยต่อบิล"
+                    value={formatBaht(metrics.kpis.avgPerOrder)}
+                    hint={`ค่ากลาง ${formatBaht(metrics.bills.median)}`}
+                  />
+                  <KpiCard
+                    label="ลูกค้าสมาชิก (ไม่ซ้ำ)"
+                    value={formatNumber(metrics.kpis.uniqueMembers)}
+                    hint="ไม่นับลูกค้าทั่วไป"
+                  />
+                </section>
+              )}
 
               {metrics.isEmpty ? (
                 <p className="rounded-2xl bg-white p-8 text-center text-stone-500 ring-1 ring-stone-200 dark:bg-stone-900 dark:text-stone-400 dark:ring-stone-800">
                   ไม่มียอดขายตามตัวกรองที่เลือก
                 </p>
-              ) : (
+              ) : tab === 'overview' ? (
                 <>
                   <DailySalesChart data={metrics.daily} />
-                  <BillDistributionChart data={metrics.bills} />
                   <BranchSalesChart data={metrics.branches} />
                   <BranchTrendChart
                     data={metrics.trend.data}
@@ -263,6 +270,11 @@ function App() {
                     autoGranularity={metrics.trend.autoGranularity}
                     onGranularityChange={chooseGranularity}
                   />
+                </>
+              ) : (
+                <>
+                  <BillDistributionChart data={metrics.bills} />
+                  <WeekdayHourHeatmap data={metrics.heatmap} />
                 </>
               )}
             </div>

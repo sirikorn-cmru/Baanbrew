@@ -179,6 +179,65 @@ export function billDistribution(rows, binSize = 20) {
   }
 }
 
+// ---------- วัน × ชั่วโมง ----------
+
+const WEEKDAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'] // index = getUTCDay()
+const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0] // เริ่มวันจันทร์
+
+// ชั่วโมงตามเวลาไทย (0–23) จาก ISO datetime ที่มี offset ใด ๆ ก็ได้
+export function toBangkokHour(datetime) {
+  const ms = Date.parse(datetime)
+  return Number.isNaN(ms) ? null : new Date(ms + BANGKOK_OFFSET_MS).getUTCHours()
+}
+
+// จำนวนบิลและยอดขายเฉลี่ยต่อวัน แยกตามวันในสัปดาห์ × ชั่วโมง ภายใน from–to
+// หารด้วยจำนวนวันนั้น ๆ ในช่วงที่เลือก (เช่น มีวันจันทร์ 25 วัน) เพื่อเทียบข้ามวันได้แม้จำนวนวันไม่เท่ากัน
+// คืน { hours, days: [{ dow, label, count, cells: [{ hour, bills, sales }] }], max, peak, quiet }
+export function weekdayHourHeatmap(rows, { from, to }) {
+  const firstRowOfBill = new Map()
+  for (const row of rows) if (!firstRowOfBill.has(row.order_id)) firstRowOfBill.set(row.order_id, row)
+  const billSales = new Map()
+  for (const row of rows) billSales.set(row.order_id, (billSales.get(row.order_id) ?? 0) + lineTotal(row))
+
+  const grid = new Map() // "dow-hour" → { bills, sales }
+  let minHour = 23
+  let maxHour = 0
+  for (const [orderId, row] of firstRowOfBill) {
+    const hour = toBangkokHour(row.datetime)
+    if (hour === null) continue
+    const dow = new Date(`${row.date}T00:00:00Z`).getUTCDay()
+    const key = `${dow}-${hour}`
+    const cell = grid.get(key) ?? { bills: 0, sales: 0 }
+    cell.bills++
+    cell.sales += billSales.get(orderId)
+    grid.set(key, cell)
+    minHour = Math.min(minHour, hour)
+    maxHour = Math.max(maxHour, hour)
+  }
+  if (!grid.size) return { hours: [], days: [], max: 0, peak: null, quiet: null }
+
+  const dayCount = new Array(7).fill(0)
+  for (let d = from; d <= to; d = addDays(d, 1)) dayCount[new Date(`${d}T00:00:00Z`).getUTCDay()]++
+
+  const hours = Array.from({ length: maxHour - minHour + 1 }, (_, i) => minHour + i)
+  const days = WEEK_ORDER.map((dow) => ({
+    dow,
+    label: WEEKDAYS[dow],
+    count: dayCount[dow],
+    cells: hours.map((hour) => {
+      const cell = grid.get(`${dow}-${hour}`)
+      const n = dayCount[dow] || 1
+      return { hour, bills: cell ? round2(cell.bills / n) : 0, sales: cell ? round2(cell.sales / n) : 0 }
+    }),
+  }))
+
+  const all = days.flatMap((d) => d.cells.map((c) => ({ ...c, day: d.label })))
+  const withDays = all.filter((c) => days.find((d) => d.label === c.day).count > 0)
+  const peak = withDays.reduce((a, b) => (b.bills > a.bills ? b : a))
+  const quiet = withDays.reduce((a, b) => (b.bills < a.bills ? b : a))
+  return { hours, days, max: peak.bills, peak, quiet }
+}
+
 // ---------- ตัวกรอง ----------
 
 // วันแรกและวันสุดท้ายที่มีข้อมูล (YYYY-MM-DD) — วันที่รูปแบบนี้เทียบเป็น string ได้เลย

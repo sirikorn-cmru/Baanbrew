@@ -27,6 +27,13 @@ const OVERVIEW_DRAWN = `(() => {
     document.querySelectorAll('.recharts-bar-rectangle path').length >= 5
 })()`
 
+// หน้าเจาะลึกยอดขาย: ฮิสโตแกรมยอดต่อบิลมีแท่ง + เส้นค่ากลาง/ค่าเฉลี่ย, heatmap ครบ 7 วัน × 14 ชั่วโมง
+const INSIGHTS_DRAWN = `(() =>
+  document.querySelectorAll('.recharts-bar-rectangle path').length >= 10 &&
+  document.querySelectorAll('.recharts-reference-line').length >= 2 &&
+  document.querySelectorAll('button[aria-label$="บิลต่อวัน"]').length >= 98
+)()`
+
 // หน้า Lab 2.2: กราฟก่อน/หลังซ่อม 5 คู่ = 10 กราฟ, เส้นรายวัน + รายสัปดาห์มีข้อมูลจริง
 const LAB2_DRAWN = `(() => {
   const lines = [...document.querySelectorAll('.recharts-line-curve')]
@@ -38,6 +45,7 @@ const SHOTS = [
   { name: 'dashboard-light', width: 1280, height: 900, scale: 1, mobile: false, dark: false, drawn: OVERVIEW_DRAWN },
   { name: 'dashboard-dark', width: 1280, height: 900, scale: 1, mobile: false, dark: true, drawn: OVERVIEW_DRAWN },
   { name: 'dashboard-mobile', width: 390, height: 844, scale: 2, mobile: true, dark: false, drawn: OVERVIEW_DRAWN },
+  { name: 'insights-light', width: 1280, height: 900, scale: 1, mobile: false, dark: false, hash: '#insights', drawn: INSIGHTS_DRAWN },
   { name: 'lab2-light', width: 1280, height: 900, scale: 1, mobile: false, dark: false, hash: '#lab2', drawn: LAB2_DRAWN },
 ]
 const PAGE_HEIGHT = `Math.ceil(document.querySelector('main').getBoundingClientRect().bottom)`
