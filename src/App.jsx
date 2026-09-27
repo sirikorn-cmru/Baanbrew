@@ -34,7 +34,7 @@ import { filtersFromSearch, filtersToSearch } from './lib/urlFilters'
 
 const CSV_URL = '/sales.csv'
 const PRODUCTS_URL = '/products.csv'
-const MEMBERS_URL = '/members.csv' // customer_id, joined_date, home_branch_id (ไม่มีข้อมูลส่วนตัว)
+const MEMBERS_URL = '/members.csv' // customer_id, joined_date, home_branch_id, gender (ไม่มีชื่อเล่น เบอร์โทร อายุ)
 const BRANCHES_URL = '/branches.csv' // ใช้แปลง home_branch_id → ชื่อสาขา
 
 // อ่านไฟล์เสริมแบบไม่บังคับ: ไม่มีไฟล์ (Vite ส่ง index.html กลับมา) = ข้อความว่าง
@@ -247,7 +247,7 @@ function App() {
           </div>
         )}
 
-        {state.status === 'ready' && tab === 'lab2' && <Lab2Page rows={state.rows} products={products} />}
+        {state.status === 'ready' && tab === 'lab2' && <Lab2Page rows={state.rows} products={products} members={members} />}
 
         {metrics && currentTab.filtered && (
           <div className="space-y-4 sm:space-y-6">

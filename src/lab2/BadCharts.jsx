@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
 } from "recharts";
-import { revenueByProduct, monthlyRevenue, branchPerformance } from "./lab2Metrics.js";
+import { revenueByProduct, monthlyRevenue, branchPerformance, revenueByGender } from "./lab2Metrics.js";
 import { dailyRevenue } from "../lib/metrics.js";
 
 const rainbow = (i, n) => `hsl(${Math.round((i * 360) / n)}, 85%, 55%)`;
@@ -100,6 +100,35 @@ export function BadChart5({ rows }) {
           <LabelList dataKey="branch" position="right"
                      content={({ x, y, width, height, index }) => index === 0 ? (
                        <text x={x + width + 8} y={y + height / 2 + 5} fill="#dc2626" fontSize={13} fontWeight={700}>แย่ที่สุด 👎</text>
+                     ) : null} />
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** กราฟ 6: เทียบยอดรวมผู้หญิง/ผู้ชาย แกน Y ไม่เริ่มที่ 0 ตัดลูกค้าทั่วไปและ "ไม่ระบุ" ทิ้งเงียบ ๆ */
+export function BadChart6({ rows, members }) {
+  const data = useMemo(
+    () => revenueByGender(rows, members).filter((g) => g.group === "หญิง" || g.group === "ชาย"),
+    [rows, members]
+  );
+  const women = data.find((g) => g.group === "หญิง");
+  const men = data.find((g) => g.group === "ชาย");
+  if (!women || !men) return null;
+  const more = Math.round((women.revenue / men.revenue - 1) * 100);
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data} margin={{ top: 30 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="group" />
+        <YAxis domain={[750000, "auto"]} allowDataOverflow width={72} />
+        <Tooltip />
+        <Bar dataKey="revenue" isAnimationActive={false}>
+          {data.map((d) => <Cell key={d.group} fill={d.group === "หญิง" ? "#ec4899" : "#3b82f6"} />)}
+          <LabelList dataKey="revenue" position="top"
+                     content={({ x, y, width, index }) => data[index].group === "หญิง" ? (
+                       <text x={x + width / 2} y={y - 10} textAnchor="middle" fill="#db2777" fontSize={13} fontWeight={700}>ผู้หญิงจ่ายมากกว่า {more}%!</text>
                      ) : null} />
         </Bar>
       </BarChart>

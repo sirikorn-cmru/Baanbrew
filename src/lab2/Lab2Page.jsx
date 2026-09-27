@@ -28,6 +28,14 @@ const CASES = [
     ask: "ฝ่ายบุคคลถาม: ผู้จัดการสาขาไหนควรได้รับการพัฒนาเร่งด่วน",
     probe: ["ทุกสาขาเปิดขายมานานเท่ากันไหม (ดู branches.csv)", "การเทียบแบบนี้ยุติธรรมกับผู้จัดการทุกคนไหม"],
   },
+  {
+    n: 6, title: "ยอดขายลูกค้าผู้หญิงเทียบผู้ชาย",
+    ask: "ฝ่ายการตลาดถาม: ลูกค้าผู้หญิงจ่ายมากกว่าผู้ชายจริงไหม ควรทำแคมเปญเจาะลูกค้าผู้หญิงหรือเปล่า",
+    probe: [
+      "กราฟนี้เทียบยอดรวม หรือยอดต่อคน/ต่อบิล และสมาชิกแต่ละเพศมีกี่คน (ดู members.csv)",
+      "ลูกค้าทั่วไปที่ไม่มีข้อมูลเพศหายไปไหน ยอดที่เห็นคิดเป็นกี่ % ของยอดขายทั้งร้าน",
+    ],
+  },
 ];
 
 function Placeholder({ n }) {
@@ -41,7 +49,7 @@ function Placeholder({ n }) {
   );
 }
 
-export default function Lab2Page({ rows, products }) {
+export default function Lab2Page({ rows, products, members }) {
   return (
     <div>
       <header className="mb-6">
@@ -69,13 +77,13 @@ export default function Lab2Page({ rows, products }) {
               <div>
                 <div className="mb-1 text-sm font-semibold text-red-700 dark:text-red-400">ก่อนซ่อม</div>
                 <div className="h-80 overflow-hidden rounded-lg bg-stone-50 p-2 dark:bg-stone-950">
-                  <BadC rows={rows} products={products} />
+                  <BadC rows={rows} products={products} members={members} />
                 </div>
               </div>
               <div>
                 <div className="mb-1 text-sm font-semibold text-emerald-700 dark:text-emerald-400">หลังซ่อม</div>
                 <div className="h-80 overflow-hidden rounded-lg bg-stone-50 p-2 dark:bg-stone-950">
-                  {FixC ? <FixC rows={rows} products={products} /> : <Placeholder n={c.n} />}
+                  {FixC ? <FixC rows={rows} products={products} members={members} /> : <Placeholder n={c.n} />}
                 </div>
               </div>
             </div>

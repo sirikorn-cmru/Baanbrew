@@ -296,7 +296,7 @@ export function menuSales(rows, products = []) {
 
 // ---------- สมาชิก ----------
 
-// อ่าน members.csv → [{ customer_id, joined_date, branch }] (branch = ชื่อสาขาประจำ จาก branchNames: B01 → สยาม)
+// อ่าน members.csv → [{ customer_id, joined_date, branch, gender }] (branch = ชื่อสาขาประจำ จาก branchNames: B01 → สยาม)
 export function parseMembers(csvText, branchNames = {}) {
   const { data } = Papa.parse(csvText, {
     header: true,
@@ -310,6 +310,7 @@ export function parseMembers(csvText, branchNames = {}) {
       customer_id: m.customer_id,
       joined_date: m.joined_date,
       branch: branchNames[m.home_branch_id] ?? m.home_branch_id,
+      gender: m.gender || 'ไม่ระบุ',
     }))
 }
 

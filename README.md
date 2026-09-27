@@ -27,9 +27,9 @@ Dashboard สรุปยอดขายของร้านบ้านบร�
 
 <img src="docs/screenshots/insights-light.png" alt="แท็บเจาะลึกยอดขาย: ฮิสโตแกรมยอดต่อบิลพร้อมเส้นค่ากลาง ฿95 และค่าเฉลี่ย ฿128.36, heatmap วัน × ชั่วโมงที่ขายดีที่สุดวันศุกร์ 12:00 น., ยอดขายแยกหมวดที่กาแฟทำยอด 45%, 10 เมนูขายดี, KPI สมาชิก 4 ตัว, สมาชิกแยกตามวันที่ซื้อล่าสุด และจำนวนสมัครสมาชิกรายเดือน" width="560">
 
-**แท็บ Lab 2.2 · ซ่อมกราฟ** — กราฟแย่ 5 แบบ (ซ้าย) เทียบกับกราฟที่ซ่อมแล้ว (ขวา) พร้อมข้อสรุปที่คำนวณจากข้อมูลจริง
+**แท็บ Lab 2.2 · ซ่อมกราฟ** — กราฟแย่ 6 แบบ (ซ้าย) เทียบกับกราฟที่ซ่อมแล้ว (ขวา) พร้อมข้อสรุปที่คำนวณจากข้อมูลจริง
 
-<img src="docs/screenshots/lab2-light.png" alt="แท็บ Lab 2.2: กราฟก่อนซ่อมและหลังซ่อม 5 คู่ ได้แก่ สัดส่วนยอดขายเมนู ยอดขายแยกสาขา ยอดขายรายวัน ยอดขายรายเดือน และผลงานสาขา" width="560">
+<img src="docs/screenshots/lab2-light.png" alt="แท็บ Lab 2.2: กราฟก่อนซ่อมและหลังซ่อม 6 คู่ ได้แก่ สัดส่วนยอดขายเมนู ยอดขายแยกสาขา ยอดขายรายวัน ยอดขายรายเดือน ผลงานสาขา และยอดขายลูกค้าผู้หญิงเทียบผู้ชาย" width="560">
 
 ภาพทั้งหมดแสดงข้อมูลทั้งช่วง (ทุกสาขา) ถ่ายด้วย Chrome แบบ headless ที่ความกว้าง 1280px และ 390px ด้วยคำสั่ง `npm run screenshots` ([`scripts/screenshots.mjs`](scripts/screenshots.mjs))
 
@@ -113,11 +113,11 @@ npm run dev
 
 | ไฟล์ | คอลัมน์ | ใช้ที่ |
 |---|---|---|
-| `public/members.csv` | `customer_id`, `joined_date`, `home_branch_id` | ส่วนสมาชิก |
+| `public/members.csv` | `customer_id`, `joined_date`, `home_branch_id`, `gender` | ส่วนสมาชิก และกราฟ 6 ในแท็บ Lab 2.2 |
 | `public/branches.csv` | `branch_id`, `branch`, … | แปลง `home_branch_id` เป็นชื่อสาขา |
 | `public/products.csv` | `product_id`, `product_name`, `category`, `cost`, … | ส่วนเมนู และแท็บ Lab 2.2 |
 
-`members.csv` ตัดมาจาก `customers.csv` เหลือเฉพาะ 3 คอลัมน์ที่ใช้ **ไม่มีชื่อเล่น เบอร์โทร เพศ หรืออายุ** เพราะไฟล์ใน `public/` ดาวน์โหลดได้จากเว็บที่ deploy แล้ว
+`members.csv` ตัดมาจาก `customers.csv` เหลือเฉพาะ 4 คอลัมน์ที่ใช้ **ไม่มีชื่อเล่น เบอร์โทร หรืออายุ** เพราะไฟล์ใน `public/` ดาวน์โหลดได้จากเว็บที่ deploy แล้ว · `gender` ใส่ไว้เพื่อกราฟ 6 ของ Lab 2.2 (ผูกกับรหัสสมาชิกเท่านั้น ไม่มีข้อมูลที่ระบุตัวบุคคล)
 
 > ไฟล์ `sales.xlsx` ไม่ได้อยู่ใน repository (อยู่ใน `.gitignore`) เพราะ dashboard อ่านจาก `sales.csv` อย่างเดียว
 
@@ -165,7 +165,7 @@ npm run dev
 | `billDistribution(rows)` | ฮิสโตแกรมยอดต่อบิล + ค่าเฉลี่ย ค่ากลาง percentile 90 |
 | `weekdayHourHeatmap(rows, …)` | จำนวนบิลและยอดเฉลี่ยต่อวัน แยกวันในสัปดาห์ × ชั่วโมง |
 | `menuSales(rows, products)` | ยอดขาย จำนวน และกำไรขั้นต้นแยกเมนูและหมวด |
-| `parseMembers(csvText, branchNames)` | อ่าน `members.csv` และแปลงรหัสสาขาเป็นชื่อ |
+| `parseMembers(csvText, branchNames)` | อ่าน `members.csv` แปลงรหัสสาขาเป็นชื่อ และเก็บเพศ (ว่าง = ไม่ระบุ) |
 | `memberInsights(rows, rangeRows, members, …)` | เทียบบิลสมาชิก/ลูกค้าทั่วไป, วันที่ซื้อล่าสุด, ไม่เคยซื้อ, สมัครรายเดือน |
 | `filterRows(rows, …)` | กรองตามสาขาและช่วงวันที่ |
 
@@ -217,7 +217,7 @@ scripts/
   screenshots.mjs           สคริปต์ถ่ายภาพหน้าจอ (npm run screenshots)
 public/
   sales.csv                 ข้อมูลขาย
-  members.csv               สมาชิก (customer_id, joined_date, home_branch_id)
+  members.csv               สมาชิก (customer_id, joined_date, home_branch_id, gender)
   branches.csv / products.csv  ข้อมูลสาขาและเมนู
 src/
   App.jsx                   หน้าหลัก: โหลดข้อมูล, ตัวกรอง, ประกอบ KPI และกราฟ

@@ -41,11 +41,14 @@ const INSIGHTS_DRAWN = `(() => {
     members.querySelectorAll('.recharts-bar-rectangle path').length >= 5
 })()`
 
-// หน้า Lab 2.2: กราฟก่อน/หลังซ่อม 5 คู่ = 10 กราฟ, เส้นรายวัน + รายสัปดาห์มีข้อมูลจริง
+// หน้า Lab 2.2: กราฟก่อน/หลังซ่อม 6 คู่ = 12 กราฟ, เส้นรายวัน + รายสัปดาห์มีข้อมูลจริง,
+// กราฟ 6 ใช้ members.csv (โหลดแยก) กราฟหลังซ่อมต้องมีครบ 4 แท่ง
 const LAB2_DRAWN = `(() => {
   const lines = [...document.querySelectorAll('.recharts-line-curve')]
-  return document.querySelectorAll('svg.recharts-surface').length >= 10 &&
-    lines.length >= 2 && lines.every((p) => (p.getAttribute('d') || '').length > 20)
+  const case6 = document.querySelectorAll('#case-6 .grid > div')[1]
+  return document.querySelectorAll('svg.recharts-surface').length >= 12 &&
+    lines.length >= 2 && lines.every((p) => (p.getAttribute('d') || '').length > 20) &&
+    !!case6 && case6.querySelectorAll('.recharts-bar-rectangle').length >= 4
 })()`
 
 const SHOTS = [

@@ -5,8 +5,10 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Cell,
 } from 'recharts'
 import { useChartTheme } from '../lib/chartTheme'
-import { formatBahtCompact, formatBahtShort, formatDayShortYear, formatMonthShort, formatNumber } from '../lib/format'
-import { branchPerformance, daysInMonth, monthlyRevenue, revenueByProduct, thaiMonth, weeklyRevenue } from './lab2Metrics.js'
+import { formatBaht, formatBahtCompact, formatBahtShort, formatDayShortYear, formatMonthShort, formatNumber } from '../lib/format'
+import {
+  branchPerformance, daysInMonth, monthlyRevenue, revenueByGender, revenueByProduct, thaiMonth, weeklyRevenue, WALK_IN,
+} from './lab2Metrics.js'
 
 const TOP_MENUS = 10
 const TREND_WEEKS = 4
@@ -240,6 +242,48 @@ export function FixedChart5({ rows }) {
               ['เฉลี่ยต่อวัน', formatBahtShort(d.perDay)],
               ['ยอดขายรวม', formatBahtShort(d.revenue)],
               ['วันที่มีข้อมูล', `${formatNumber(d.days)} วัน`],
+            ]}
+          />
+        }
+      />
+    </Frame>
+  )
+}
+
+/** กราฟ 6: เทียบยอดต่อบิลแทนยอดรวม ใส่ลูกค้าทั่วไปและ "ไม่ระบุ" ด้วย ให้เห็นว่าข้อมูลเพศครอบคลุมยอดขายแค่ไหน */
+export function FixedChart6({ rows, members }) {
+  const { data, summary } = useMemo(() => {
+    const data = revenueByGender(rows, members)
+    const women = data.find((d) => d.group === 'หญิง')
+    const men = data.find((d) => d.group === 'ชาย')
+    if (!women || !men) return { data, summary: 'ไม่มีข้อมูลเพศของสมาชิก (public/members.csv)' }
+    const total = data.reduce((s, d) => s + d.revenue, 0)
+    const known = (women.revenue + men.revenue) / total
+    const gap = women.perBill / men.perBill - 1
+    const sameMedian = women.medianBill === men.medianBill
+    return {
+      data,
+      summary:
+        `ต่อบิลแทบเท่ากัน: หญิง ${formatBaht(women.perBill)} ชาย ${formatBaht(men.perBill)} (${signedPct(gap)}` +
+        `${sameMedian ? ` · ค่ากลาง ${formatBahtShort(women.medianBill)} ทั้งคู่` : ''}) · ` +
+        `ยอดรวมผู้หญิงสูงกว่าเพราะมีสมาชิกมากกว่า ${formatNumber(women.members)} เทียบ ${formatNumber(men.members)} คน · ` +
+        `รู้เพศแค่ ${pct(known)} ของยอดขาย`,
+    }
+  }, [rows, members])
+
+  return (
+    <Frame summary={summary}>
+      <RankedBars
+        data={data} nameKey="group" valueKey="perBill" nameWidth={96} labelWidth={84} labelFormat={(v) => `${formatBahtShort(v)}/บิล`}
+        tip={
+          <Tip
+            title={(d) => (d.group === WALK_IN ? `${WALK_IN} (ไม่มีข้อมูลเพศ)` : d.group)}
+            lines={(d) => [
+              ['เฉลี่ยต่อบิล', formatBaht(d.perBill)],
+              ['ค่ากลางต่อบิล', formatBahtShort(d.medianBill)],
+              ['จำนวนบิล', formatNumber(d.bills)],
+              ['ยอดขายรวม', formatBahtShort(d.revenue)],
+              ...(d.members === null ? [] : [['สมาชิก', `${formatNumber(d.members)} คน`], ['ยอดต่อสมาชิก', formatBahtShort(d.perMember)]]),
             ]}
           />
         }
