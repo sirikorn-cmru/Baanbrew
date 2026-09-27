@@ -177,7 +177,7 @@ export function FixedChart4({ rows }) {
 
   return (
     <Frame summary={summary}>
-      <BarChart data={data} margin={{ top: 18, right: 4, bottom: 0, left: 0 }}>
+      <BarChart data={data} margin={{ top: 18, right: 24, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke={theme.grid} />
         <XAxis dataKey="month" tickFormatter={thaiMonth} interval="preserveStartEnd" minTickGap={8} tick={{ fontSize: 11, fill: theme.axisText }} tickLine={false} />
         <YAxis tickFormatter={formatBahtCompact} width={56} tick={{ fontSize: 12, fill: theme.axisText }} axisLine={false} tickLine={false} />

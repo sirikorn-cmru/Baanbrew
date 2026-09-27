@@ -19,19 +19,27 @@ const PAGE_URL = process.argv[2] ?? 'http://localhost:5173/'
 const OUT_DIR = resolve(process.argv[3] ?? 'docs/screenshots')
 const PORT = 9333
 
-const SHOTS = [
-  { name: 'dashboard-light', width: 1280, height: 900, scale: 1, mobile: false, dark: false },
-  { name: 'dashboard-dark', width: 1280, height: 900, scale: 1, mobile: false, dark: true },
-  { name: 'dashboard-mobile', width: 390, height: 844, scale: 2, mobile: true, dark: false },
-]
-
-// กราฟวาดเสร็จเมื่อ: มี 3 กราฟ, ทุกเส้นมีข้อมูลเส้นจริง (ยอดรายวัน 2 + รายสาขา 5 = 7 เส้น), กราฟแท่งมีครบ 5 สาขา
-const CHARTS_DRAWN = `(() => {
+// หน้าภาพรวม: มี 3 กราฟ, ทุกเส้นมีข้อมูลเส้นจริง (ยอดรายวัน 2 + รายสาขา 5 = 7 เส้น), กราฟแท่งมีครบ 5 สาขา
+const OVERVIEW_DRAWN = `(() => {
   const lines = [...document.querySelectorAll('.recharts-line-curve')]
   return document.querySelectorAll('svg.recharts-surface').length >= 3 &&
     lines.length >= 7 && lines.every((p) => (p.getAttribute('d') || '').length > 20) &&
     document.querySelectorAll('.recharts-bar-rectangle path').length >= 5
 })()`
+
+// หน้า Lab 2.2: กราฟก่อน/หลังซ่อม 5 คู่ = 10 กราฟ, เส้นรายวัน + รายสัปดาห์มีข้อมูลจริง
+const LAB2_DRAWN = `(() => {
+  const lines = [...document.querySelectorAll('.recharts-line-curve')]
+  return document.querySelectorAll('svg.recharts-surface').length >= 10 &&
+    lines.length >= 2 && lines.every((p) => (p.getAttribute('d') || '').length > 20)
+})()`
+
+const SHOTS = [
+  { name: 'dashboard-light', width: 1280, height: 900, scale: 1, mobile: false, dark: false, drawn: OVERVIEW_DRAWN },
+  { name: 'dashboard-dark', width: 1280, height: 900, scale: 1, mobile: false, dark: true, drawn: OVERVIEW_DRAWN },
+  { name: 'dashboard-mobile', width: 390, height: 844, scale: 2, mobile: true, dark: false, drawn: OVERVIEW_DRAWN },
+  { name: 'lab2-light', width: 1280, height: 900, scale: 1, mobile: false, dark: false, hash: '#lab2', drawn: LAB2_DRAWN },
+]
 const PAGE_HEIGHT = `Math.ceil(document.querySelector('main').getBoundingClientRect().bottom)`
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -119,9 +127,9 @@ async function main() {
     const { send } = cdp
     const evaluate = async (expression) =>
       (await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result.value
-    const waitDrawn = async () => {
+    const waitDrawn = async (drawn) => {
       for (let i = 0; i < 150; i++) {
-        if (await evaluate(CHARTS_DRAWN)) return true
+        if (await evaluate(drawn)) return true
         await sleep(200)
       }
       return false
@@ -139,14 +147,16 @@ async function main() {
       await send('Emulation.setEmulatedMedia', {
         features: [{ name: 'prefers-color-scheme', value: s.dark ? 'dark' : 'light' }],
       })
-      await send('Page.navigate', { url: PAGE_URL })
-      if (!(await waitDrawn())) throw new Error(`${s.name}: กราฟวาดไม่เสร็จ`)
+      // ไปหน้าว่างก่อน — ถ้าต่างกันแค่ hash เบราว์เซอร์จะไม่โหลดหน้าใหม่ แท็บจึงไม่เปลี่ยน
+      await send('Page.navigate', { url: 'about:blank' })
+      await send('Page.navigate', { url: `${PAGE_URL}${s.hash ?? ''}` })
+      if (!(await waitDrawn(s.drawn))) throw new Error(`${s.name}: กราฟวาดไม่เสร็จ`)
 
       // ขยาย viewport ให้สูงเท่าหน้าเว็บ แล้วรอกราฟวาดใหม่ตามขนาด — ถ่ายตอน resize อาจได้กราฟว่าง
       const height = await evaluate(PAGE_HEIGHT)
       await setViewport(s, height)
       await sleep(500)
-      if (!(await waitDrawn())) throw new Error(`${s.name}: กราฟว่างหลังปรับขนาด`)
+      if (!(await waitDrawn(s.drawn))) throw new Error(`${s.name}: กราฟว่างหลังปรับขนาด`)
       await sleep(1000)
 
       const { data } = await send('Page.captureScreenshot', {
