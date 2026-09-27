@@ -4,6 +4,25 @@ Dashboard สรุปยอดขายของร้านบ้านบร�
 
 ข้อมูลครอบคลุม **1 เม.ย. 2568 – 20 ก.ย. 2569** จำนวน 53,092 แถว (34,791 บิล) จาก 5 สาขา
 
+![ภาพหน้าจอ บ้านบรู Dashboard: ตัวกรอง, KPI 4 ตัว, กราฟยอดขายรายวัน, ยอดขายแยกสาขา และยอดขายรายสาขาตามเวลา](docs/screenshots/dashboard-light.png)
+
+---
+
+## ภาพหน้าจอ
+
+<table>
+  <tr>
+    <th>โหมดมืด</th>
+    <th>มือถือ (390px)</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/screenshots/dashboard-dark.png" alt="Dashboard ในโหมดมืด" width="560"></td>
+    <td valign="top"><img src="docs/screenshots/dashboard-mobile.png" alt="Dashboard บนจอมือถือ: KPI เรียง 2 คอลัมน์ กราฟเต็มความกว้าง" width="240"></td>
+  </tr>
+</table>
+
+ภาพทั้งหมดแสดงข้อมูลทั้งช่วง (ทุกสาขา) ถ่ายด้วย Chrome แบบ headless ที่ความกว้าง 1280px และ 390px
+
 ---
 
 ## วิธีรัน
@@ -151,6 +170,7 @@ npm run dev
 ## โครงสร้างโปรเจกต์
 
 ```
+docs/screenshots/           ภาพหน้าจอที่ใช้ใน README
 public/
   sales.csv                 ข้อมูลขาย
 src/
