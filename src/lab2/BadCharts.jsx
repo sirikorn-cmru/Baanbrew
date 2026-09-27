@@ -127,9 +127,15 @@ export function BadChart6({ rows, members }) {
         <Bar dataKey="revenue" isAnimationActive={false}>
           {data.map((d) => <Cell key={d.group} fill={d.group === "หญิง" ? "#ec4899" : "#3b82f6"} />)}
           <LabelList dataKey="revenue" position="top"
-                     content={({ x, y, width, index }) => data[index].group === "หญิง" ? (
-                       <text x={x + width / 2} y={y - 10} textAnchor="middle" fill="#db2777" fontSize={13} fontWeight={700}>ผู้หญิงจ่ายมากกว่า {more}%!</text>
-                     ) : null} />
+                     content={({ x, y, width, index }) => {
+                       if (data[index].group !== "หญิง") return null;
+                       // แท่งแคบ (จอมือถือ) ป้ายยาวกว่าแท่ง ถ้าจัดกึ่งกลางจะล้นไปทับตัวเลขแกน Y จึงชิดซ้ายของแท่งแทน
+                       const narrow = width < 160;
+                       return (
+                         <text x={narrow ? x : x + width / 2} y={y - 10} textAnchor={narrow ? "start" : "middle"}
+                               fill="#db2777" fontSize={narrow ? 11 : 13} fontWeight={700}>ผู้หญิงจ่ายมากกว่า {more}%!</text>
+                       );
+                     }} />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
