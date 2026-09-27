@@ -1,4 +1,5 @@
 import { presetRange } from '../lib/metrics'
+import BranchListbox from './BranchListbox'
 
 const PRESETS = [
   { days: 7, label: '7 วัน' },
@@ -30,21 +31,12 @@ function Group({ label, children }) {
 // onChange(patch) รับเฉพาะค่าที่เปลี่ยน
 function FilterBar({ bounds, branches, filters, onChange }) {
   const { from, to } = filters
-  const selected = new Set(filters.branches)
   const set = onChange
 
   const activePreset = PRESETS.find((p) => {
     const r = presetRange(bounds, p.days)
     return r.from === from && r.to === to
   })
-
-  const toggleBranch = (b) => {
-    const next = new Set(selected)
-    if (next.has(b)) next.delete(b)
-    else next.add(b)
-    // เลือกครบทุกสาขา = เท่ากับ "ทุกสาขา"
-    set({ branches: next.size === branches.length ? [] : branches.filter((x) => next.has(x)) })
-  }
 
   // ถ้าผู้ใช้เลือกวันเริ่มหลังวันสิ้นสุด (หรือกลับกัน) ให้ขยับอีกฝั่งตาม ช่วงจะได้ไม่ว่าง
   const setFrom = (v) => v && set({ from: v, to: v > to ? v : to })
@@ -96,27 +88,7 @@ function FilterBar({ bounds, branches, filters, onChange }) {
       </Group>
 
       <Group label="สาขา">
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            aria-pressed={selected.size === 0}
-            className={chip(selected.size === 0)}
-            onClick={() => set({ branches: [] })}
-          >
-            ทุกสาขา
-          </button>
-          {branches.map((b) => (
-            <button
-              key={b}
-              type="button"
-              aria-pressed={selected.has(b)}
-              className={chip(selected.has(b))}
-              onClick={() => toggleBranch(b)}
-            >
-              {b}
-            </button>
-          ))}
-        </div>
+        <BranchListbox branches={branches} selected={filters.branches} onChange={(next) => set({ branches: next })} />
       </Group>
 
       {!isDefault && (
