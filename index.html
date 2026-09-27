@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>baanbrew-dashboard</title>
+    <script>
+      // ตั้งธีมก่อนหน้าเว็บแสดงผล กันหน้าขาวแวบก่อนเปลี่ยนเป็นโหมดมืด (ต้องตรงกับ src/lib/theme.js)
+      ;(function () {
+        var pref = 'system'
+        try {
+          pref = localStorage.getItem('baanbrew-theme') || 'system'
+        } catch (e) {}
+        var dark = pref === 'dark' || (pref !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('dark', dark)
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
