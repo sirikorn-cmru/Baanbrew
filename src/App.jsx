@@ -34,6 +34,8 @@ import { filtersFromSearch, filtersToSearch } from './lib/urlFilters'
 
 // โหลด Firebase SDK เฉพาะตอนเปิดแท็บ Lab 3 — แท็บอื่นไม่ต้องดาวน์โหลด
 const Lab3Page = lazy(() => import('./lab3/Lab3Page'))
+// key ของ Firebase Web มีรูปแบบตายตัว (AIza + 35 ตัว) — ค่าผิดรูปแบบทำให้ Firebase Auth throw จนทั้งหน้าว่าง
+const HAS_FIREBASE_CONFIG = /^AIza[\w-]{35}$/.test(import.meta.env.VITE_FIREBASE_API_KEY ?? '')
 
 const CSV_URL = '/sales.csv'
 const PRODUCTS_URL = '/products.csv'
@@ -243,14 +245,14 @@ function App() {
         </nav>
 
         {/* ไม่มีค่า config (เช่น ลืมใส่ Environment Variables บน Vercel) → แจ้งแทนการทำให้ทั้งหน้าพัง */}
-        {tab === 'lab3' && !import.meta.env.VITE_FIREBASE_API_KEY && (
+        {tab === 'lab3' && !HAS_FIREBASE_CONFIG && (
           <div className="rounded-2xl bg-white p-5 text-sm text-stone-700 ring-1 ring-red-200 dark:bg-stone-900 dark:text-stone-300 dark:ring-red-900">
             <p className="font-semibold text-red-700 dark:text-red-400">ยังไม่ได้ตั้งค่า Firebase</p>
-            <p className="mt-1">ใส่ค่า VITE_FIREBASE_* ใน .env.local (เครื่องตัวเอง) หรือ Environment Variables ของ Vercel แล้ว build ใหม่</p>
+            <p className="mt-1">ใส่ค่า VITE_FIREBASE_* ใน .env.local (เครื่องตัวเอง) หรือ Environment Variables ของ Vercel แล้ว build ใหม่ — VITE_FIREBASE_API_KEY ต้องเป็น key อย่างเดียว ขึ้นต้นด้วย AIza ยาว 39 ตัว</p>
           </div>
         )}
 
-        {tab === 'lab3' && import.meta.env.VITE_FIREBASE_API_KEY && (
+        {tab === 'lab3' && HAS_FIREBASE_CONFIG && (
           <Suspense fallback={<p className="text-stone-500 dark:text-stone-400">กำลังโหลด…</p>}>
             <Lab3Page />
           </Suspense>
