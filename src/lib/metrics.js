@@ -21,6 +21,18 @@ export function toBangkokDate(datetime) {
   return new Date(ms + BANGKOK_OFFSET_MS).toISOString().slice(0, 10)
 }
 
+// แถวจาก CSV (Papa.parse header: true) → แถวที่มี revenue, date, hour สำหรับ pipeline วิเคราะห์ (Lab 4)
+// date ใช้ 10 ตัวแรกของ datetime ซึ่งเป็นเวลาไทยอยู่แล้ว (ไม่แปลงผ่าน toISOString ซึ่งเป็น UTC)
+export function prepareRows(rows) {
+  return rows
+    .filter((r) => r.order_id)
+    .map((r) => {
+      const qty = Number(r.qty)
+      const unitPrice = Number(r.unit_price)
+      return { ...r, qty, unitPrice, revenue: qty * unitPrice, date: r.datetime.slice(0, 10), hour: Number(r.datetime.slice(11, 13)) }
+    })
+}
+
 // ยอดขายของหนึ่งแถว = qty × unit_price
 export function lineTotal(row) {
   return row.qty * row.unit_price

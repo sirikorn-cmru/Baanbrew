@@ -8,6 +8,7 @@ const provider = new GoogleAuthProvider()
 
 export const signIn = () => signInWithPopup(auth, provider)
 export const logOut = () => signOut(auth)
+export const onAuth = (callback) => onAuthStateChanged(auth, callback)
 
 // user: undefined = กำลังตรวจสถานะ, null = ยังไม่ล็อกอิน, object = ล็อกอินแล้ว
 export function useAuth() {

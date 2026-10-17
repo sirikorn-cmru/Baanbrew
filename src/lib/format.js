@@ -39,3 +39,6 @@ export const formatMonthLong = dateFmt({ month: 'long', year: 'numeric' })
 
 // "2025-04-01" → "อ. 1 เม.ย. 2568"
 export const formatDayLong = dateFmt({ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+
+// 0.391 → "39%" (digits = ทศนิยม)
+export const formatPct = (x, digits = 0) => `${(x * 100).toFixed(digits)}%`

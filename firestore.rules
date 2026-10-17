@@ -74,5 +74,12 @@ service cloud.firestore {
 
       allow update, delete: if false;
     }
+
+    // Lab 4.2 · ผลวิเคราะห์ที่ scripts/build-analytics.mjs เขียนด้วย firebase-admin (ข้าม rules)
+    // มีรายชื่อลูกค้าและยอดซื้อรายคน จึงอ่านได้เฉพาะคนที่ล็อกอิน · หน้าเว็บเขียนไม่ได้ (กันปลอมผลวิเคราะห์)
+    match /analytics/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
   }
 }

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import ChartCard from '../components/ChartCard'
 import ChartTooltip from '../components/ChartTooltip'
@@ -7,7 +6,8 @@ import { useIsMobile } from '../hooks/useMediaQuery'
 import { CONTEXT_OPACITY, useChartTheme } from '../lib/chartTheme'
 import { formatBaht, formatBahtCompact, formatBahtShort, formatDayLong, formatDayShort, formatNumber } from '../lib/format'
 import SalesForm from './SalesForm'
-import { logOut, signIn, useAuth } from './useAuth'
+import AuthBar from './AuthBar'
+import { useAuth } from './useAuth'
 import { useLiveSales } from './useLiveSales'
 
 const STATUS = {
@@ -18,39 +18,6 @@ const STATUS = {
 }
 
 const timeFmt = new Intl.DateTimeFormat('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-
-const buttonClass =
-  'rounded-lg px-3 py-1.5 text-sm font-medium ring-1 ring-stone-300 hover:bg-stone-100 dark:ring-stone-700 dark:hover:bg-stone-800'
-
-function AuthBar({ user }) {
-  const [error, setError] = useState('')
-  const login = () => {
-    setError('')
-    signIn().catch((err) => {
-      // ผู้ใช้ปิดหน้าต่างเอง ไม่ใช่ข้อผิดพลาด
-      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') setError(err.message)
-    })
-  }
-  if (user === undefined) return null
-  return (
-    <div className="flex flex-wrap items-center gap-3 text-sm text-stone-600 dark:text-stone-400">
-      {user ? (
-        <>
-          <span>
-            ล็อกอินเป็น <span className="font-medium text-stone-900 dark:text-stone-100">{user.displayName ?? user.email}</span>
-          </span>
-          <button type="button" onClick={logOut} className={buttonClass}>ออกจากระบบ</button>
-        </>
-      ) : (
-        <>
-          <span>ดูยอดขายได้เลย · ล็อกอินเพื่อบันทึกยอดขาย</span>
-          <button type="button" onClick={login} className={buttonClass}>ล็อกอินด้วย Google</button>
-        </>
-      )}
-      {error && <span className="w-full text-red-700 dark:text-red-400">ล็อกอินไม่สำเร็จ: {error}</span>}
-    </div>
-  )
-}
 
 function StatusBadge({ status, pending }) {
   const s = STATUS[status]

@@ -32,3 +32,6 @@ public/sales.xlsx
 
 # Firebase CLI deploy cache
 .firebase/
+
+# Lab 4 · service account key ของ firebase-admin (ห้าม commit)
+secrets/

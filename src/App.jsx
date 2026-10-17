@@ -34,8 +34,12 @@ import { filtersFromSearch, filtersToSearch } from './lib/urlFilters'
 
 // โหลด Firebase SDK เฉพาะตอนเปิดแท็บ Lab 3 — แท็บอื่นไม่ต้องดาวน์โหลด
 const Lab3Page = lazy(() => import('./lab3/Lab3Page'))
+const CustomersTab = lazy(() => import('./lab4/CustomersTab'))
+const ForecastTab = lazy(() => import('./lab4/ForecastTab'))
 // key ของ Firebase Web มีรูปแบบตายตัว (AIza + 35 ตัว) — ค่าผิดรูปแบบทำให้ Firebase Auth throw จนทั้งหน้าว่าง
 const HAS_FIREBASE_CONFIG = /^AIza[\w-]{35}$/.test(import.meta.env.VITE_FIREBASE_API_KEY ?? '')
+// ?demo = แท็บ Lab 4 คำนวณผลวิเคราะห์จาก sales.csv ในเบราว์เซอร์ ไม่ใช้ Firestore (ไม่ต้องล็อกอิน ไม่ใช้โควตา)
+const DEMO = new URLSearchParams(window.location.search).has('demo')
 
 const CSV_URL = '/sales.csv'
 const PRODUCTS_URL = '/products.csv'
@@ -52,6 +56,8 @@ const TABS = [
   { id: 'insights', label: 'เจาะลึกยอดขาย', hash: '#insights', filtered: true },
   { id: 'lab2', label: 'Lab 2.2 · ซ่อมกราฟ', hash: '#lab2', filtered: false },
   { id: 'lab3', label: 'Lab 3.2 · Real-time', hash: '#lab3', filtered: false, scope: 'ข้อมูลสดจาก Cloud Firestore' },
+  { id: 'customers', label: 'ลูกค้า & เมนู', hash: '#customers', filtered: false, lab4: true, scope: 'Lab 4.1–4.2 · RFM, Cohort และ ABC จากประวัติทั้งหมด' },
+  { id: 'forecast', label: 'พยากรณ์ & ผิดปกติ', hash: '#forecast', filtered: false, lab4: true, scope: 'Lab 4.4–4.5 · พยากรณ์ 28 วัน และวันที่ยอดผิดปกติ' },
 ]
 const tabFromHash = (hash) => (TABS.find((t) => t.hash && t.hash === hash) ?? TABS[0]).id
 const MERGE_WINDOW_MS = 400
@@ -258,9 +264,28 @@ function App() {
           </Suspense>
         )}
 
-        {tab !== 'lab3' && state.status === 'loading' && <p className="text-stone-500 dark:text-stone-400">กำลังโหลดข้อมูล…</p>}
+        {currentTab.lab4 && !DEMO && !HAS_FIREBASE_CONFIG && (
+          <div className="rounded-2xl bg-white p-5 text-sm text-stone-700 ring-1 ring-red-200 dark:bg-stone-900 dark:text-stone-300 dark:ring-red-900">
+            <p className="font-semibold text-red-700 dark:text-red-400">ยังไม่ได้ตั้งค่า Firebase</p>
+            <p className="mt-1">
+              ใส่ค่า VITE_FIREBASE_* แล้ว build ใหม่ หรือเปิด <a className="underline" href={`?demo${currentTab.hash}`}>โหมดสาธิต</a> ที่คำนวณในเบราว์เซอร์
+            </p>
+          </div>
+        )}
 
-        {tab !== 'lab3' && state.status === 'error' && (
+        {currentTab.lab4 && (DEMO ? state.status === 'ready' : HAS_FIREBASE_CONFIG) && (
+          <Suspense fallback={<p className="text-stone-500 dark:text-stone-400">กำลังโหลด…</p>}>
+            {tab === 'customers' ? (
+              <CustomersTab demo={DEMO} rows={state.rows} products={products} />
+            ) : (
+              <ForecastTab demo={DEMO} rows={state.rows} products={products} />
+            )}
+          </Suspense>
+        )}
+
+        {tab !== 'lab3' && (!currentTab.lab4 || DEMO) && state.status === 'loading' && <p className="text-stone-500 dark:text-stone-400">กำลังโหลดข้อมูล…</p>}
+
+        {tab !== 'lab3' && (!currentTab.lab4 || DEMO) && state.status === 'error' && (
           <div className="rounded-2xl bg-white p-5 text-stone-700 ring-1 ring-red-200 dark:bg-stone-900 dark:text-stone-300 dark:ring-red-900">
             <p className="font-semibold text-red-700 dark:text-red-400">โหลดข้อมูลไม่สำเร็จ</p>
             <p className="mt-1 text-sm">{state.message}</p>
