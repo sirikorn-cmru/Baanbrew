@@ -1,5 +1,5 @@
 import Papa from 'papaparse'
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import BillDistributionChart from './components/BillDistributionChart'
 import BranchSalesChart from './components/BranchSalesChart'
 import BranchTrendChart from './components/BranchTrendChart'
@@ -32,6 +32,9 @@ import {
 import { applyTheme, useTheme } from './lib/theme'
 import { filtersFromSearch, filtersToSearch } from './lib/urlFilters'
 
+// โหลด Firebase SDK เฉพาะตอนเปิดแท็บ Lab 3 — แท็บอื่นไม่ต้องดาวน์โหลด
+const Lab3Page = lazy(() => import('./lab3/Lab3Page'))
+
 const CSV_URL = '/sales.csv'
 const PRODUCTS_URL = '/products.csv'
 const MEMBERS_URL = '/members.csv' // customer_id, joined_date, home_branch_id, gender (ไม่มีชื่อเล่น เบอร์โทร อายุ)
@@ -46,6 +49,7 @@ const TABS = [
   { id: 'overview', label: 'ภาพรวม', hash: '', filtered: true },
   { id: 'insights', label: 'เจาะลึกยอดขาย', hash: '#insights', filtered: true },
   { id: 'lab2', label: 'Lab 2.2 · ซ่อมกราฟ', hash: '#lab2', filtered: false },
+  { id: 'lab3', label: 'Lab 3.2 · Real-time', hash: '#lab3', filtered: false, scope: 'ข้อมูลสดจาก Cloud Firestore' },
 ]
 const tabFromHash = (hash) => (TABS.find((t) => t.hash && t.hash === hash) ?? TABS[0]).id
 const MERGE_WINDOW_MS = 400
@@ -203,7 +207,7 @@ function App() {
 
   const scopeText =
     !currentTab.filtered
-      ? 'ข้อมูลทั้งหมด ทุกสาขา (ไม่ใช้ตัวกรองของหน้าภาพรวม)'
+      ? (currentTab.scope ?? 'ข้อมูลทั้งหมด ทุกสาขา (ไม่ใช้ตัวกรองของหน้าภาพรวม)')
       : filters &&
     `${formatDayLong(filters.from)} – ${formatDayLong(filters.to)} · ${
       filters.branches.length ? filters.branches.join(', ') : 'ทุกสาขา'
@@ -238,9 +242,15 @@ function App() {
           ))}
         </nav>
 
-        {state.status === 'loading' && <p className="text-stone-500 dark:text-stone-400">กำลังโหลดข้อมูล…</p>}
+        {tab === 'lab3' && (
+          <Suspense fallback={<p className="text-stone-500 dark:text-stone-400">กำลังโหลด…</p>}>
+            <Lab3Page />
+          </Suspense>
+        )}
 
-        {state.status === 'error' && (
+        {tab !== 'lab3' && state.status === 'loading' && <p className="text-stone-500 dark:text-stone-400">กำลังโหลดข้อมูล…</p>}
+
+        {tab !== 'lab3' && state.status === 'error' && (
           <div className="rounded-2xl bg-white p-5 text-stone-700 ring-1 ring-red-200 dark:bg-stone-900 dark:text-stone-300 dark:ring-red-900">
             <p className="font-semibold text-red-700 dark:text-red-400">โหลดข้อมูลไม่สำเร็จ</p>
             <p className="mt-1 text-sm">{state.message}</p>
