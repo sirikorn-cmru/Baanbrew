@@ -8,32 +8,37 @@ const DAILY_LIMIT = 150
 const ENTRY_LIMIT = 10
 
 // สถานะการเชื่อมต่อ: loading → live (ข้อมูลจากเซิร์ฟเวอร์) / cache (ออฟไลน์ ใช้ข้อมูลในเครื่อง) / error
+// q = null → ไม่ฟัง (เช่น ยังไม่ล็อกอิน จึงไม่มีสิทธิ์อ่าน)
+const IDLE = { status: 'idle', docs: [], pending: false }
+const LOADING = { status: 'loading', docs: [], pending: false }
 function useSnapshot(q) {
-  const [state, setState] = useState({ status: 'loading', docs: [], pending: false })
-  useEffect(
-    () =>
-      onSnapshot(
-        q,
-        { includeMetadataChanges: true },
-        (snap) =>
-          setState({
-            status: snap.metadata.fromCache ? 'cache' : 'live',
-            docs: snap.docs.map((d) => ({ id: d.id, ...d.data() })),
-            pending: snap.metadata.hasPendingWrites, // เขียนแล้วแต่เซิร์ฟเวอร์ยังไม่ยืนยัน
-          }),
-        (err) => setState({ status: 'error', docs: [], pending: false, message: err.message }),
-      ),
-    [q],
-  )
-  return state
+  const [state, setState] = useState({ q: null, ...IDLE }) // จำไว้ว่าผลนี้มาจาก query ไหน
+  useEffect(() => {
+    if (!q) return undefined
+    return onSnapshot(
+      q,
+      { includeMetadataChanges: true },
+      (snap) =>
+        setState({
+          q,
+          status: snap.metadata.fromCache ? 'cache' : 'live',
+          docs: snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+          pending: snap.metadata.hasPendingWrites, // เขียนแล้วแต่เซิร์ฟเวอร์ยังไม่ยืนยัน
+        }),
+      (err) => setState({ q, status: 'error', docs: [], pending: false, message: err.message }),
+    )
+  }, [q])
+  if (!q) return IDLE
+  return state.q === q ? state : LOADING
 }
 
 const dailyQuery = query(collection(db, 'daily_sales'), orderBy('date', 'desc'), limit(DAILY_LIMIT))
 const entryQuery = query(collection(db, 'sales_entries'), orderBy('createdAt', 'desc'), limit(ENTRY_LIMIT))
 
-export function useLiveSales() {
+// signedIn: รายการที่บันทึก (มีชื่อคนบันทึก) อ่านได้เฉพาะคนที่ล็อกอิน — ดู firestore.rules
+export function useLiveSales({ signedIn }) {
   const daily = useSnapshot(dailyQuery)
-  const entries = useSnapshot(entryQuery)
+  const entries = useSnapshot(signedIn ? entryQuery : null)
   const [catalog, setCatalog] = useState({ branches: [], products: [] })
 
   // สาขาและเมนูแทบไม่เปลี่ยน อ่านครั้งเดียวพอ ไม่ต้องฟังแบบ real-time

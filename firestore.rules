@@ -1,0 +1,78 @@
+rules_version = '2';
+
+// Lab 3.3 · Security Rules ของบ้านบรู
+//   - ใครก็ดูยอดขายได้ (dashboard เป็นหน้าสาธารณะ)
+//   - บันทึกยอดขายได้เฉพาะคนที่ล็อกอิน และข้อมูลต้องถูกรูปแบบ
+//   - สาขา/เมนูแก้จากหน้าเว็บไม่ได้ (นำเข้าใหม่ต้องเปิดสิทธิ์ชั่วคราว หรือใช้ Admin SDK)
+//   - ลบข้อมูลจากหน้าเว็บไม่ได้เลย
+// deploy: npx firebase-tools deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isDate(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    // ยอดต่อบิลจากฟอร์ม: 1–50 ชิ้น × ราคาไม่เกิน ฿200
+    function validBill(revenue, items) {
+      return items is int && items >= 1 && items <= 50
+        && revenue is number && revenue > 0 && revenue <= items * 200;
+    }
+
+    match /branches/{branchId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ยอดรวมรายวันต่อสาขา — เอกสาร id = {วันที่}_{รหัสสาขา}
+    match /daily_sales/{docId} {
+      allow read: if true;
+
+      // วันแรกของสาขานั้น: เริ่มที่ 1 บิล
+      allow create: if signedIn()
+        && docId == request.resource.data.date + '_' + request.resource.data.branch_id
+        && isDate(request.resource.data.date)
+        && exists(/databases/$(database)/documents/branches/$(request.resource.data.branch_id))
+        && request.resource.data.keys().hasOnly(['date', 'branch_id', 'branch', 'revenue', 'items', 'bills'])
+        && request.resource.data.bills == 1
+        && validBill(request.resource.data.revenue, request.resource.data.items);
+
+      // วันที่มีอยู่แล้ว: เพิ่มได้ทีละ 1 บิลเท่านั้น ห้ามลดยอดหรือแก้ช่องอื่น
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revenue', 'items', 'bills'])
+        && request.resource.data.bills == resource.data.bills + 1
+        && validBill(request.resource.data.revenue - resource.data.revenue,
+                     request.resource.data.items - resource.data.items);
+
+      allow delete: if false;
+    }
+
+    // รายการที่บันทึกจากฟอร์ม — มีชื่อผู้บันทึก จึงให้อ่านเฉพาะคนที่ล็อกอิน
+    match /sales_entries/{entryId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['date', 'branch_id', 'branch', 'product_id', 'product_name',
+             'qty', 'unit_price', 'revenue', 'payment_method', 'uid', 'recorded_by', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && isDate(request.resource.data.date)
+        && request.resource.data.qty is int && request.resource.data.qty >= 1 && request.resource.data.qty <= 50
+        && request.resource.data.unit_price
+             == get(/databases/$(database)/documents/products/$(request.resource.data.product_id)).data.price
+        && request.resource.data.revenue == request.resource.data.qty * request.resource.data.unit_price
+        && request.resource.data.payment_method in ['เงินสด', 'QR พร้อมเพย์', 'บัตรเครดิต'];
+
+      allow update, delete: if false;
+    }
+  }
+}
