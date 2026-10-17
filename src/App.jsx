@@ -242,7 +242,15 @@ function App() {
           ))}
         </nav>
 
-        {tab === 'lab3' && (
+        {/* ไม่มีค่า config (เช่น ลืมใส่ Environment Variables บน Vercel) → แจ้งแทนการทำให้ทั้งหน้าพัง */}
+        {tab === 'lab3' && !import.meta.env.VITE_FIREBASE_API_KEY && (
+          <div className="rounded-2xl bg-white p-5 text-sm text-stone-700 ring-1 ring-red-200 dark:bg-stone-900 dark:text-stone-300 dark:ring-red-900">
+            <p className="font-semibold text-red-700 dark:text-red-400">ยังไม่ได้ตั้งค่า Firebase</p>
+            <p className="mt-1">ใส่ค่า VITE_FIREBASE_* ใน .env.local (เครื่องตัวเอง) หรือ Environment Variables ของ Vercel แล้ว build ใหม่</p>
+          </div>
+        )}
+
+        {tab === 'lab3' && import.meta.env.VITE_FIREBASE_API_KEY && (
           <Suspense fallback={<p className="text-stone-500 dark:text-stone-400">กำลังโหลด…</p>}>
             <Lab3Page />
           </Suspense>
