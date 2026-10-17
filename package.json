@@ -8,10 +8,12 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "import:firestore": "node scripts/import-firestore.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "firebase": "^13.0.0",
     "papaparse": "^5.7.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
