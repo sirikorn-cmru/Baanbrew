@@ -29,3 +29,6 @@ public/sales.xlsx
 # Claude Code: personal local settings and temp files written by the app
 .claude/settings.local.json
 .claude/*.tmp.*
+
+# Firebase CLI deploy cache
+.firebase/
